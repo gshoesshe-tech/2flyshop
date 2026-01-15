@@ -10,6 +10,7 @@ let __sb = null;
 
 // --- Helper Functions ---
 
+// 1. FIX: Added the missing money formatting function
 function money(val) {
   return '₱' + (Number(val) || 0).toLocaleString('en-US');
 }
@@ -36,6 +37,7 @@ const $$ = (sel, p = document) => p.querySelectorAll(sel);
 
 
 // ---------------- LANDING (index.html) ----------------
+// 2. FIX: Added logic for the Landing page
 function initLanding() {
   const enterBtn = $("#enterBtn");
   const fade = $("#enterFade");
@@ -44,7 +46,9 @@ function initLanding() {
 
   // Handle Enter
   enterBtn?.addEventListener("click", () => {
+    // Fade out effect
     fade.classList.add("is-on");
+    // Wait for transition then go to shop
     setTimeout(() => {
       window.location.href = "./shop.html";
     }, 450);
@@ -54,6 +58,7 @@ function initLanding() {
   soundBtn?.addEventListener("click", () => {
     if(!video) return;
     video.muted = !video.muted;
+    // Optional: Visual feedback
     soundBtn.style.opacity = video.muted ? "0.6" : "1";
   });
 }
@@ -99,7 +104,7 @@ function addToCart(prod, qty) {
       price: Number(prod.price) || 0,
       code: prod.code || "",
       sku: prod.sku || "",
-      category: prod.category || "General", // Ensure category exists
+      category: prod.category || "",
       image: (prod.images && prod.images[0]) || prod.image_url || "",
       qty: q
     });
@@ -111,7 +116,7 @@ function initShop() {
   loadCart();
   wireCartUI();
 
-  const sb = getSupabase(); 
+  const sb = getSupabase(); // Use the safe getter
   const grid = $("#productsGrid");
   const empty = $("#emptyState");
 
@@ -181,7 +186,7 @@ function initShop() {
     });
   }
 
-  // Product modal logic
+  // Product modal
   const modal = $("#productModal");
   const modalCloseEls = $$("[data-close='1']", modal);
   const pMain = $("#pMainImg");
@@ -342,17 +347,9 @@ function wireCartUI() {
   const checkoutCloseEls = $$("[data-close-checkout='1']", checkoutModal);
   const copyBtn = $("#copyOrderBtn");
 
-  // FIX #1: Close the cart drawer BEFORE opening the checkout modal
   checkoutBtn?.addEventListener("click", () => {
     if (!cart.items.length) return;
-    
-    // 1. Close the cart drawer first to avoid confusion
-    closeCart(); 
-
-    // 2. Prepare the text
     refreshOrderText();
-
-    // 3. Open the modal
     checkoutModal.classList.add("is-open");
     checkoutModal.setAttribute("aria-hidden", "false");
   });
@@ -388,7 +385,6 @@ function wireCartUI() {
     el?.addEventListener("input", refreshOrderText);
   });
 
-  // FIX #2: Group items by category and separate totals
   function refreshOrderText() {
     const name = ($("#cName")?.value || "").trim();
     const phone = ($("#cPhone")?.value || "").trim();
@@ -403,45 +399,22 @@ function wireCartUI() {
     lines.push(`Address: ${address}`);
     if (notes) lines.push(`Notes: ${notes}`);
     lines.push("");
-    lines.push("--- ORDER DETAILS ---");
-    lines.push("");
+    lines.push("Order List:");
 
-    // Group items by category
-    const groups = {};
     cart.items.forEach(it => {
-      const cat = (it.category || "General").toUpperCase(); // e.g. "EARRINGS"
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(it);
+      const qty = Number(it.qty) || 0;
+      
+      // --- CHANGED LOGIC HERE ---
+      // We prioritize SKU. If no SKU, use Code. If no Code, use Name.
+      const label = it.sku || it.code || it.name;
+      
+      // Removed price per item and name to save paper
+      lines.push(`• ${label} – x${qty}`);
     });
 
-    // Iterate through groups
-    for (const [category, items] of Object.entries(groups)) {
-      lines.push(`📂 ${category}`);
-      
-      let catTotal = 0;
-      let catQty = 0;
-
-      items.forEach(it => {
-        const price = Number(it.price) || 0;
-        const qty = Number(it.qty) || 0;
-        const sub = price * qty;
-        
-        catTotal += sub;
-        catQty += qty;
-
-        const codePart = it.code ? ` (Code: ${it.code})` : "";
-        lines.push(`• ${it.name}${codePart} – x${qty} (${money(price)} each)`);
-      });
-
-      // Subtotal for this category
-      lines.push(`> Subtotal: ${money(catTotal)} (${catQty} pcs)`);
-      lines.push(""); // Spacer
-    }
-
-    lines.push("================================");
-    lines.push(`GRAND TOTAL: ${money(cartSubtotal())}`);
-    lines.push(`TOTAL QUANTITY: ${cartTotalQty()} pcs`);
-    lines.push("================================");
+    lines.push("");
+    lines.push(`Total Amount: ${money(cartSubtotal())}`);
+    lines.push(`Total Quantity: ${cartTotalQty()}`);
 
     const out = lines.join("\n");
     const ta = $("#orderText");
@@ -597,6 +570,7 @@ function initAdmin() {
   });
 
   async function uploadOne(file) {
+    // Sanitize filename
     const safeName = String(file.name || 'image').replace(/[^a-z0-9_.-]/gi, '_');
     const path = `public/products/${Date.now()}_${Math.random().toString(16).slice(2)}_${safeName}`;
 
