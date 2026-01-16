@@ -350,6 +350,10 @@ function wireCartUI() {
   checkoutBtn?.addEventListener("click", () => {
     if (!cart.items.length) return;
     refreshOrderText();
+    
+    // --- FIX: Close the cart drawer so the modal is visible ---
+    closeCart();
+    
     checkoutModal.classList.add("is-open");
     checkoutModal.setAttribute("aria-hidden", "false");
   });
