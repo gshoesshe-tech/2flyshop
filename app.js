@@ -37,7 +37,6 @@ const $$ = (sel, p = document) => p.querySelectorAll(sel);
 
 
 // ---------------- LANDING (index.html) ----------------
-// 2. FIX: Added logic for the Landing page
 function initLanding() {
   const enterBtn = $("#enterBtn");
   const fade = $("#enterFade");
@@ -46,9 +45,7 @@ function initLanding() {
 
   // Handle Enter
   enterBtn?.addEventListener("click", () => {
-    // Fade out effect
     fade.classList.add("is-on");
-    // Wait for transition then go to shop
     setTimeout(() => {
       window.location.href = "./shop.html";
     }, 450);
@@ -58,7 +55,6 @@ function initLanding() {
   soundBtn?.addEventListener("click", () => {
     if(!video) return;
     video.muted = !video.muted;
-    // Optional: Visual feedback
     soundBtn.style.opacity = video.muted ? "0.6" : "1";
   });
 }
@@ -116,14 +112,13 @@ function initShop() {
   loadCart();
   wireCartUI();
 
-  const sb = getSupabase(); // Use the safe getter
+  const sb = getSupabase();
   const grid = $("#productsGrid");
   const empty = $("#emptyState");
 
   const pills = $$(".pill");
-  let activeFilter = "Earrings"; // Default category
+  let activeFilter = "Earrings";
 
-  // Filter Logic
   pills.forEach(p => {
     p.addEventListener("click", () => {
       pills.forEach(x => x.classList.remove("is-active"));
@@ -137,7 +132,6 @@ function initShop() {
 
   async function fetchProducts() {
     if (!sb) {
-      console.warn("Supabase not initialized.");
       empty.textContent = "Supabase not connected. Check config.js.";
       empty.hidden = false;
       return;
@@ -149,7 +143,6 @@ function initShop() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error(error);
       empty.hidden = false;
       empty.textContent = "Error loading products.";
       return;
@@ -186,7 +179,6 @@ function initShop() {
     });
   }
 
-  // Product modal
   const modal = $("#productModal");
   const modalCloseEls = $$("[data-close='1']", modal);
   const pMain = $("#pMainImg");
@@ -205,11 +197,8 @@ function initShop() {
 
   function openProductModal(prod) {
     currentProd = normalizeProduct(prod);
-
-    // images
     const imgs = currentProd.images.length ? currentProd.images : [currentProd.image_url].filter(Boolean);
-    const main = imgs[0] || "";
-    pMain.src = main;
+    pMain.src = imgs[0] || "";
     pMain.alt = currentProd.name;
 
     pThumbs.innerHTML = "";
@@ -218,9 +207,7 @@ function initShop() {
       b.className = "thumb";
       b.type = "button";
       b.innerHTML = `<img src="${escapeHtmlAttr(u)}" alt="" />`;
-      b.addEventListener("click", () => {
-        pMain.src = u;
-      });
+      b.addEventListener("click", () => { pMain.src = u; });
       pThumbs.appendChild(b);
     });
 
@@ -229,7 +216,6 @@ function initShop() {
     pCategory.textContent = currentProd.category || "";
     pSku.textContent = currentProd.sku || "";
     pCode.textContent = currentProd.code || "";
-
     pQty.value = "1";
     syncAddBtn();
 
@@ -246,10 +232,6 @@ function initShop() {
   }
 
   modalCloseEls.forEach(el => el.addEventListener("click", closeProductModal));
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modal.classList.contains("is-open")) closeProductModal();
-  });
-
   function syncAddBtn() {
     const q = clampInt(pQty.value, 1);
     pAddBtn.textContent = `ADD ${q} TO CART`;
@@ -280,7 +262,7 @@ function initShop() {
     addToCart(currentProd, q);
     updateCartUI();
     closeProductModal();
-    window.openCart(); // Open drawer
+    window.openCart();
   });
 
   fetchProducts();
@@ -301,12 +283,7 @@ function normalizeProduct(p) {
 }
 
 function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }
 function escapeHtmlAttr(s) {
   return escapeHtml(s || "");
@@ -320,28 +297,24 @@ function wireCartUI() {
   const drawer = $("#cartDrawer");
   const closeBtn = $("#closeCartBtn");
 
-  cartBtn?.addEventListener("click", openCart);
-  overlay?.addEventListener("click", closeCart);
-  closeBtn?.addEventListener("click", closeCart);
-
   function openCart() {
     if(!overlay || !drawer) return;
     overlay.hidden = false;
     drawer.classList.add("is-open");
-    drawer.setAttribute("aria-hidden", "false");
     updateCartUI();
   }
   function closeCart() {
     if(!overlay || !drawer) return;
     overlay.hidden = true;
     drawer.classList.remove("is-open");
-    drawer.setAttribute("aria-hidden", "true");
   }
 
+  cartBtn?.addEventListener("click", openCart);
+  overlay?.addEventListener("click", closeCart);
+  closeBtn?.addEventListener("click", closeCart);
   window.openCart = openCart;
   window.closeCart = closeCart;
 
-  // Checkout modal
   const checkoutBtn = $("#checkoutBtn");
   const checkoutModal = $("#checkoutModal");
   const checkoutCloseEls = $$("[data-close-checkout='1']", checkoutModal);
@@ -350,25 +323,11 @@ function wireCartUI() {
   checkoutBtn?.addEventListener("click", () => {
     if (!cart.items.length) return;
     refreshOrderText();
-    
-    // --- FIX: Close the cart drawer so the modal is visible ---
     closeCart();
-    
     checkoutModal.classList.add("is-open");
-    checkoutModal.setAttribute("aria-hidden", "false");
   });
 
-  checkoutCloseEls.forEach(el => el.addEventListener("click", () => {
-    checkoutModal.classList.remove("is-open");
-    checkoutModal.setAttribute("aria-hidden", "true");
-  }));
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && checkoutModal?.classList.contains("is-open")) {
-      checkoutModal.classList.remove("is-open");
-      checkoutModal.setAttribute("aria-hidden", "true");
-    }
-  });
+  checkoutCloseEls.forEach(el => el.addEventListener("click", () => checkoutModal.classList.remove("is-open")));
 
   copyBtn?.addEventListener("click", async () => {
     const t = $("#orderText")?.value || "";
@@ -385,10 +344,10 @@ function wireCartUI() {
   });
 
   ["#cName", "#cPhone", "#cAddress", "#cNotes"].forEach(sel => {
-    const el = $(sel);
-    el?.addEventListener("input", refreshOrderText);
+    $(sel)?.addEventListener("input", refreshOrderText);
   });
 
+  // --- UPDATED ORDER FORM LOGIC ---
   function refreshOrderText() {
     const name = ($("#cName")?.value || "").trim();
     const phone = ($("#cPhone")?.value || "").trim();
@@ -397,28 +356,50 @@ function wireCartUI() {
 
     const lines = [];
     lines.push("🛒 ORDER FORM – 2FLY.GALLERIA");
-    lines.push("");
     lines.push(`Name: ${name}`);
     lines.push(`Phone: ${phone}`);
     lines.push(`Address: ${address}`);
     if (notes) lines.push(`Notes: ${notes}`);
     lines.push("");
-    lines.push("Order List:");
 
+    // 1. Group items by Category
+    const grouped = {};
     cart.items.forEach(it => {
-      const qty = Number(it.qty) || 0;
-      
-      // --- CHANGED LOGIC HERE ---
-      // We prioritize SKU. If no SKU, use Code. If no Code, use Name.
-      const label = it.sku || it.code || it.name;
-      
-      // Removed price per item and name to save paper
-      lines.push(`• ${label} – x${qty}`);
+      const cat = (it.category || "General").toUpperCase();
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(it);
     });
 
-    lines.push("");
-    lines.push(`Total Amount: ${money(cartSubtotal())}`);
-    lines.push(`Total Quantity: ${cartTotalQty()}`);
+    // 2. Build segments per Category
+    for (const category in grouped) {
+      let catQty = 0;
+      let catSubtotalValue = 0;
+
+      lines.push(`[ ${category} ]`);
+      lines.push("");
+
+      grouped[category].forEach(it => {
+        const qty = Number(it.qty) || 0;
+        const price = Number(it.price) || 0;
+        // Prioritize Code/SKU to save space
+        const identifier = (it.code || it.sku || it.name || "N/A").trim();
+        
+        lines.push(`${identifier} x${qty}`);
+        
+        catQty += qty;
+        catSubtotalValue += (price * qty);
+      });
+
+      lines.push("");
+      lines.push(`Total Quantity: ${catQty}`);
+      lines.push(`Subtotal: ${money(catSubtotalValue)}`);
+      lines.push("--------------------------");
+      lines.push("");
+    }
+
+    // Grand Totals at bottom
+    lines.push(`GRAND TOTAL QTY: ${cartTotalQty()}`);
+    lines.push(`GRAND TOTAL AMT: ${money(cartSubtotal())}`);
 
     const out = lines.join("\n");
     const ta = $("#orderText");
@@ -437,14 +418,9 @@ function updateCartUI() {
   if (totalQtyEl) totalQtyEl.textContent = String(cartTotalQty());
 
   if (!itemsWrap) return;
-
   itemsWrap.innerHTML = "";
   if (!cart.items.length) {
-    const d = document.createElement("div");
-    d.style.color = "rgba(255,255,255,.55)";
-    d.style.padding = "14px 0";
-    d.textContent = "Your cart is empty.";
-    itemsWrap.appendChild(d);
+    itemsWrap.innerHTML = '<div style="color:rgba(255,255,255,.55);padding:14px 0;">Your cart is empty.</div>';
     return;
   }
 
@@ -465,49 +441,28 @@ function updateCartUI() {
           <div style="color:rgba(255,255,255,.75);font-weight:700;">${money((Number(it.price)||0) * (Number(it.qty)||0))}</div>
         </div>
       </div>
-      <button class="trashBtn" type="button" data-del="${it.id}" aria-label="Remove item">🗑</button>
+      <button class="trashBtn" type="button" data-del="${it.id}">🗑</button>
     `;
     itemsWrap.appendChild(row);
   });
 
-  // Attach events
-  itemsWrap.querySelectorAll("[data-dec]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-dec");
-      const item = findCartItem(id);
-      if (!item) return;
-      item.qty = Math.max(1, clampInt(item.qty, 1) - 1);
-      saveCart(); updateCartUI();
-    });
-  });
-
-  itemsWrap.querySelectorAll("[data-inc]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-inc");
-      const item = findCartItem(id);
-      if (!item) return;
-      item.qty = clampInt(item.qty, 1) + 1;
-      saveCart(); updateCartUI();
-    });
-  });
-
-  itemsWrap.querySelectorAll("[data-qty]").forEach(inp => {
-    inp.addEventListener("input", () => {
-      const id = inp.getAttribute("data-qty");
-      const item = findCartItem(id);
-      if (!item) return;
-      item.qty = clampInt(inp.value, 1);
-      saveCart(); updateCartUI();
-    });
-  });
-
-  itemsWrap.querySelectorAll("[data-del]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-del");
-      cart.items = cart.items.filter(x => String(x.id) !== String(id));
-      saveCart(); updateCartUI();
-    });
-  });
+  // UI Events
+  itemsWrap.querySelectorAll("[data-dec]").forEach(btn => btn.addEventListener("click", () => {
+    const item = findCartItem(btn.dataset.dec);
+    if (item) { item.qty = Math.max(1, item.qty - 1); saveCart(); updateCartUI(); }
+  }));
+  itemsWrap.querySelectorAll("[data-inc]").forEach(btn => btn.addEventListener("click", () => {
+    const item = findCartItem(btn.dataset.inc);
+    if (item) { item.qty += 1; saveCart(); updateCartUI(); }
+  }));
+  itemsWrap.querySelectorAll("[data-qty]").forEach(inp => inp.addEventListener("input", () => {
+    const item = findCartItem(inp.dataset.qty);
+    if (item) { item.qty = clampInt(inp.value, 1); saveCart(); updateCartUI(); }
+  }));
+  itemsWrap.querySelectorAll("[data-del]").forEach(btn => btn.addEventListener("click", () => {
+    cart.items = cart.items.filter(x => String(x.id) !== String(btn.dataset.del));
+    saveCart(); updateCartUI();
+  }));
 }
 
 
@@ -522,25 +477,9 @@ function initAdmin() {
     msgEl.style.color = isErr ? 'rgba(255,90,90,.95)' : 'rgba(255,255,255,.70)';
   };
 
-  if (!sb) {
-    setMsg('Supabase not configured in config.js', true);
-    return;
-  }
+  if (!sb) { setMsg('Supabase not configured', true); return; }
 
-  const aName = $("#aName");
-  const aPrice = $("#aPrice");
-  const aCode = $("#aCode");
-  const aSku = $("#aSku");
-  const aCategory = $("#aCategory");
-  const aStatus = $("#aStatus");
-  const aSoldOut = $("#aSoldOut");
-  const aImageUrl = $("#aImageUrl");
-  const addUrlBtn = $("#addUrlBtn");
-  const aFiles = $("#aFiles");
-  const uploadFilesBtn = $("#uploadFilesBtn");
-  const imgList = $("#imgList");
-  const createProductBtn = $("#createProductBtn");
-  const adminProducts = $("#adminProducts");
+  const aName = $("#aName"), aPrice = $("#aPrice"), aCode = $("#aCode"), aSku = $("#aSku"), aCategory = $("#aCategory"), aStatus = $("#aStatus"), aSoldOut = $("#aSoldOut"), aImageUrl = $("#aImageUrl"), addUrlBtn = $("#addUrlBtn"), aFiles = $("#aFiles"), uploadFilesBtn = $("#uploadFilesBtn"), imgList = $("#imgList"), createProductBtn = $("#createProductBtn"), adminProducts = $("#adminProducts");
 
   let stagedImages = [];
 
@@ -548,177 +487,62 @@ function initAdmin() {
     if (!imgList) return;
     imgList.innerHTML = stagedImages.map((url, idx) => `
       <div class="imgChip">
-        <img src="${escapeHtmlAttr(url)}" alt="" loading="lazy" />
-        <div class="imgChip__row">
-          <button class="imgChip__btn" type="button" data-rm="${idx}">Remove</button>
-          <span style="color:rgba(255,255,255,.45); font-size:11px;">${idx + 1}</span>
-        </div>
+        <img src="${escapeHtmlAttr(url)}" />
+        <div class="imgChip__row"><button class="imgChip__btn" type="button" data-rm="${idx}">Remove</button></div>
       </div>
     `).join('');
-
-    imgList.querySelectorAll('button[data-rm]').forEach((b) => {
-      b.addEventListener('click', () => {
-        const i = Number(b.getAttribute('data-rm'));
-        stagedImages.splice(i, 1);
-        renderStaged();
-      });
-    });
+    imgList.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { stagedImages.splice(b.dataset.rm, 1); renderStaged(); }));
   }
 
   addUrlBtn?.addEventListener('click', () => {
-    const u = (aImageUrl?.value || '').trim();
-    if (!u) return;
-    stagedImages.push(u);
-    if (aImageUrl) aImageUrl.value = '';
-    renderStaged();
+    const u = aImageUrl.value.trim();
+    if (u) { stagedImages.push(u); aImageUrl.value = ''; renderStaged(); }
   });
-
-  async function uploadOne(file) {
-    // Sanitize filename
-    const safeName = String(file.name || 'image').replace(/[^a-z0-9_.-]/gi, '_');
-    const path = `public/products/${Date.now()}_${Math.random().toString(16).slice(2)}_${safeName}`;
-
-    const { error } = await sb.storage.from('product_images').upload(path, file, { upsert: false });
-    if (error) throw error;
-
-    const { data } = sb.storage.from('product_images').getPublicUrl(path);
-    return data?.publicUrl || '';
-  }
 
   uploadFilesBtn?.addEventListener('click', async () => {
     const files = Array.from(aFiles?.files || []);
     if (!files.length) return;
-
-    uploadFilesBtn.disabled = true;
-    setMsg('Uploading images…');
-
+    uploadFilesBtn.disabled = true; setMsg('Uploading...');
     try {
       for (const f of files) {
-        const url = await uploadOne(f);
-        if (url) stagedImages.push(url);
+        const path = `public/${Date.now()}_${f.name.replace(/[^a-z0-9.]/gi, '_')}`;
+        await sb.storage.from('product_images').upload(path, f);
+        stagedImages.push(sb.storage.from('product_images').getPublicUrl(path).data.publicUrl);
       }
-      if (aFiles) aFiles.value = '';
-      renderStaged();
-      setMsg('Images uploaded ✅');
-    } catch (e) {
-      console.error(e);
-      setMsg(`Upload failed: ${e?.message || e}`, true);
-    } finally {
-      uploadFilesBtn.disabled = false;
-    }
+      aFiles.value = ''; renderStaged(); setMsg('Uploaded ✅');
+    } catch (e) { setMsg('Upload failed', true); }
+    finally { uploadFilesBtn.disabled = false; }
   });
 
   async function loadAdminProducts() {
     if (!adminProducts) return;
-    setMsg('Loading products…');
-
-    const { data, error } = await sb.from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error(error);
-      setMsg(`Load failed: ${error.message}`, true);
-      return;
-    }
-
-    setMsg('');
-    const list = data || [];
-    adminProducts.innerHTML = list.map((p) => {
-      const img = (Array.isArray(p.images) && p.images[0]) ? p.images[0] : (p.image_url || '');
-      const meta = [
-        p.code ? `Code: ${p.code}` : null,
-        `₱${Number(p.price || 0)}`,
-        p.sold_out ? 'SOLD OUT' : null,
-      ].filter(Boolean).join(' • ');
-
-      return `
-        <div class="adminItem">
-          <div class="adminItem__top">
-            <div>
-              <div class="adminItem__name">${escapeHtml(p.name || '')}</div>
-              <div class="adminItem__meta">${escapeHtml(meta)}</div>
-            </div>
-            <div class="adminItem__btns">
-              <button class="btn btn--ghost" type="button" data-del="${p.id}">Delete</button>
-            </div>
-          </div>
+    const { data } = await sb.from('products').select('*').order('created_at', { ascending: false });
+    adminProducts.innerHTML = (data || []).map(p => `
+      <div class="adminItem">
+        <div class="adminItem__top">
+          <div><div class="adminItem__name">${escapeHtml(p.name)}</div></div>
+          <button class="btn btn--ghost" data-del="${p.id}">Delete</button>
         </div>
-      `;
-    }).join('');
-
-    adminProducts.querySelectorAll('button[data-del]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        if(!confirm("Are you sure?")) return;
-        const id = btn.getAttribute('data-del');
-        setMsg('Deleting…');
-        const { error: delErr } = await sb.from('products').delete().eq('id', id);
-        if (delErr) {
-          setMsg(`Delete failed: ${delErr.message}`, true);
-        } else {
-          setMsg('Deleted ✅');
-          loadAdminProducts();
-        }
-      });
-    });
+      </div>`).join('');
+    adminProducts.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+      if(confirm("Delete?")) { await sb.from('products').delete().eq('id', b.dataset.del); loadAdminProducts(); }
+    }));
   }
 
   createProductBtn?.addEventListener('click', async () => {
-    const name = (aName?.value || '').trim();
-    const price = Number((aPrice?.value || '').trim());
-    const code = (aCode?.value || '').trim();
-    const sku = (aSku?.value || '').trim();
-    const category = (aCategory?.value || 'Earrings');
-    const status = (aStatus?.value || 'active');
-    const sold_out = Boolean(aSoldOut?.checked);
-
-    if (!name) return setMsg('Name is required.', true);
-    
-    // Create product object
-    const payload = {
-      name,
-      price,
-      code,
-      sku,
-      category,
-      status,
-      sold_out,
-      images: stagedImages,
-      image_url: stagedImages[0] || null // backward compat
-    };
-
-    createProductBtn.disabled = true;
-    setMsg('Creating…');
-
-    const { error } = await sb.from('products').insert(payload);
-
-    if (error) {
-      console.error(error);
-      setMsg(`Failed: ${error.message}`, true);
-    } else {
-      setMsg('Created ✅');
-      // Reset form
-      if(aName) aName.value = "";
-      if(aPrice) aPrice.value = "";
-      if(aCode) aCode.value = "";
-      if(aSku) aSku.value = "";
-      stagedImages = [];
-      renderStaged();
-      loadAdminProducts();
-    }
-    createProductBtn.disabled = false;
+    const payload = { name: aName.value.trim(), price: Number(aPrice.value), code: aCode.value.trim(), sku: aSku.value.trim(), category: aCategory.value, status: aStatus.value, sold_out: aSoldOut.checked, images: stagedImages };
+    if (!payload.name) return setMsg('Name required', true);
+    await sb.from('products').insert(payload);
+    setMsg('Created ✅'); loadAdminProducts();
   });
 
   loadAdminProducts();
 }
 
-
-// ---------------- BOOTSTRAP ----------------
 function bootstrap() {
-  const page = document.body?.dataset?.page;
-  if (page === 'landing') initLanding();
-  if (page === 'shop') initShop();
-  if (page === 'admin') initAdmin();
+  const p = document.body?.dataset?.page;
+  if (p === 'landing') initLanding();
+  if (p === 'shop') initShop();
+  if (p === 'admin') initAdmin();
 }
-
 document.addEventListener('DOMContentLoaded', bootstrap);
