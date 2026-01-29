@@ -1,7 +1,8 @@
-/* 2FLY Wholesale System (Updated)
-   - Added Size Selector for "Close Caps" only
-   - Added Admin Toggle buttons (Hide/Show, Sold Out) to preserve product order
-*/
+{
+type: uploaded file
+fileName: app.js
+fullContent:
+/* 2FLY Wholesale System (Fixed) */
 
 const SUPABASE_URL = (window.__SUPABASE_URL__ || '').trim();
 const SUPABASE_ANON_KEY = (window.__SUPABASE_ANON_KEY__ || '').trim();
@@ -96,6 +97,11 @@ async function initShop() {
             activeFilter = pill.dataset.filter;
             productsNav.classList.remove('open');
             productsToggle.setAttribute('aria-expanded', 'false');
+            
+            // Update UI to show what category we are in
+            const sectionTitle = $('.sectionTitle');
+            if(sectionTitle) sectionTitle.textContent = activeFilter.toUpperCase();
+
             renderGrid(allProducts);
         });
     });
@@ -189,7 +195,7 @@ async function initShop() {
     }
 
     if (filtered.length === 0) {
-      empty.textContent = "No products found in this category.";
+      empty.textContent = `No ${activeFilter} found.`;
       empty.hidden = false;
       return;
     }
@@ -443,8 +449,7 @@ let stagedImages = [];
 
 async function initAdmin() {
   const sb = getSupabase();
-  const wrap = $('.adminWrap');
-
+  
   // Gate check
   const gate = document.createElement('div');
   gate.className = 'keyGate';
@@ -492,7 +497,7 @@ async function initAdmin() {
   function setMsg(txt, isErr=false) {
     msgDiv.textContent = txt;
     msgDiv.style.color = isErr ? '#ff4444' : '#00ff88';
-    setTimeout(() => msgDiv.textContent = '', 4000);
+    setTimeout(() => msgDiv.textContent = '', 6000);
   }
 
   function renderStaged() {
@@ -515,103 +520,117 @@ async function initAdmin() {
     });
   }
 
-  addUrlBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    const val = aImageUrl.value.trim();
-    if (val) {
-      stagedImages.push(val);
-      renderStaged();
-      aImageUrl.value = '';
-    }
-  });
+  if(addUrlBtn) {
+      addUrlBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const val = aImageUrl.value.trim();
+        if (val) {
+          stagedImages.push(val);
+          renderStaged();
+          aImageUrl.value = '';
+          setMsg('Link added! Now proceed to CREATE PRODUCT.');
+        }
+      });
+  }
 
-  uploadFilesBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    const files = aFiles.files;
-    if (!files || files.length === 0) return;
-    if (!sb) return alert("Supabase not configured");
+  if(uploadFilesBtn) {
+      uploadFilesBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const files = aFiles.files;
+        if (!files || files.length === 0) return alert("Select files first.");
+        if (!sb) return alert("Supabase not configured");
 
-    setMsg('Uploading...');
-    uploadFilesBtn.disabled = true;
+        setMsg('Uploading... Please wait.');
+        uploadFilesBtn.disabled = true;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const ext = file.name.split('.').pop();
-      const fileName = `upload_${Date.now()}_${i}.${ext}`;
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const ext = file.name.split('.').pop();
+          const fileName = `upload_${Date.now()}_${i}.${ext}`;
 
-      const { error } = await sb.storage
-        .from('public_image')
-        .upload(fileName, file);
+          const { error } = await sb.storage
+            .from('public_image')
+            .upload(fileName, file);
 
-      if (error) {
-        console.error(error);
-        setMsg(`Upload failed: ${file.name}`, true);
-      } else {
-        const { data: { publicUrl } } = sb.storage
-          .from('public_image')
-          .getPublicUrl(fileName);
+          if (error) {
+            console.error(error);
+            setMsg(`Upload failed: ${file.name}`, true);
+          } else {
+            const { data: { publicUrl } } = sb.storage
+              .from('public_image')
+              .getPublicUrl(fileName);
 
-        stagedImages.push(publicUrl);
-      }
-    }
+            stagedImages.push(publicUrl);
+          }
+        }
 
-    renderStaged();
-    aFiles.value = '';
-    uploadFilesBtn.disabled = false;
-    setMsg('Uploads complete.');
-  });
+        renderStaged();
+        aFiles.value = '';
+        uploadFilesBtn.disabled = false;
+        setMsg('Images ready! Now click "CREATE PRODUCT" below to finish.');
+      });
+  }
 
-  createProductBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    if(!sb) return;
+  if(createProductBtn) {
+      createProductBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if(!sb) return;
 
-    const name = (aName?.value || '').trim();
-    const price = Number((aPrice?.value || '').trim());
-    const code = (aCode?.value || '').trim();
-    const sku = (aSku?.value || '').trim();
-    const category = (aCategory?.value || 'Earrings');
-    const status = (aStatus?.value || 'active');
-    const sold_out = Boolean(aSoldOut?.checked);
+        const name = (aName?.value || '').trim();
+        const price = Number((aPrice?.value || '').trim());
+        const code = (aCode?.value || '').trim();
+        const sku = (aSku?.value || '').trim();
+        const category = (aCategory?.value || 'Earrings');
+        const status = (aStatus?.value || 'active');
+        const sold_out = Boolean(aSoldOut?.checked);
 
-    if (!name) return setMsg('Name is required.', true);
+        if (!name) return alert('Product Name is required.');
+        if (!price) return alert('Price is required.');
 
-    const payload = {
-      name,
-      price,
-      code,
-      sku,
-      category,
-      status,
-      sold_out,
-      images: stagedImages,
-      image_url: stagedImages[0] || null
-    };
+        const payload = {
+          name,
+          price,
+          code,
+          sku,
+          category,
+          status,
+          sold_out,
+          images: stagedImages,
+          image_url: stagedImages[0] || null
+        };
 
-    createProductBtn.disabled = true;
-    setMsg('Creating…');
+        createProductBtn.textContent = "SAVING...";
+        createProductBtn.disabled = true;
+        setMsg('Saving to database...');
 
-    const { error } = await sb.from('products').insert(payload);
+        const { error } = await sb.from('products').insert(payload);
 
-    if (error) {
-      console.error(error);
-      setMsg(`Failed: ${error.message}`, true);
-    } else {
-      setMsg('Created ✅');
-      if(aName) aName.value = "";
-      if(aPrice) aPrice.value = "";
-      if(aCode) aCode.value = "";
-      if(aSku) aSku.value = "";
-      stagedImages = [];
-      renderStaged();
-      loadAdminProducts();
-    }
-    createProductBtn.disabled = false;
-  });
+        if (error) {
+          console.error(error);
+          setMsg(`Failed: ${error.message}`, true);
+          alert('Error: ' + error.message);
+        } else {
+          setMsg('CREATED SUCCESSFULLY ✅');
+          alert(`Success! "${name}" has been added to the Shop.`);
+          
+          // Reset form
+          if(aName) aName.value = "";
+          if(aPrice) aPrice.value = "";
+          if(aCode) aCode.value = "";
+          if(aSku) aSku.value = "";
+          stagedImages = [];
+          renderStaged();
+          loadAdminProducts();
+        }
+        createProductBtn.textContent = "CREATE PRODUCT NOW";
+        createProductBtn.disabled = false;
+      });
+  }
 
   // --- Toggle Logic in List ---
   async function loadAdminProducts() {
     if(!sb) return;
-    productsContainer.innerHTML = 'Loading...';
+    productsContainer.innerHTML = '<div style="color:#888; padding:10px;">Loading inventory...</div>';
 
     const { data, error } = await sb
       .from('products')
@@ -620,7 +639,7 @@ async function initAdmin() {
 
     if(error) {
       console.error(error);
-      productsContainer.textContent = 'Error loading.';
+      productsContainer.textContent = 'Error loading products list.';
       return;
     }
 
@@ -641,7 +660,7 @@ async function initAdmin() {
             <div class="adminItem__name">${p.name}</div>
             <div class="adminItem__meta">${p.category} • ${money(p.price)}</div>
             <div class="adminItem__meta" style="font-size:11px; margin-top:2px;">
-               ${isInactive ? '🔴 INACTIVE (Hidden)' : '🟢 ACTIVE'} 
+               ${isInactive ? '🔴 HIDDEN' : '🟢 ACTIVE'} 
                ${isSoldOut ? ' • ⚠️ SOLD OUT' : ''}
             </div>
           </div>
@@ -650,11 +669,11 @@ async function initAdmin() {
 
         <div class="adminItem__btns" style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
           <button type="button" class="btn btn--ghost toggleStatusBtn" style="padding:8px 12px; font-size:10px;">
-            ${isInactive ? 'SHOW (Set Active)' : 'HIDE (Set Inactive)'}
+            ${isInactive ? 'SHOW PRODUCT' : 'HIDE PRODUCT'}
           </button>
 
           <button type="button" class="btn btn--ghost toggleSoldBtn" style="padding:8px 12px; font-size:10px;">
-            ${isSoldOut ? 'Mark Available' : 'Mark Sold Out'}
+            ${isSoldOut ? 'MARK AVAILABLE' : 'MARK SOLD OUT'}
           </button>
 
           <button type="button" class="btn btn--ghost delBtn" style="padding:8px 12px; font-size:10px; border-color:#552222; color:#faa;">DELETE</button>
@@ -700,4 +719,5 @@ async function initAdmin() {
       productsContainer.appendChild(div);
     });
   }
+}
 }
