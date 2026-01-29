@@ -769,63 +769,29 @@ body{
   .pill{ min-width: 145px; }
   .qtyRow{ grid-template-columns: 42px 86px 42px 1fr; }
 }
-/* ---------------- Products Dropdown ---------------- */
-.productsNav{
-  position: relative;
-  display: inline-block;
-}
 
-.productsBtn{
-  /* match .pill look */
-  min-width:160px;
-  padding:16px 18px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.25);
-  color:#fff;
-  font-family:var(--fontHead);
-  font-weight:800;
-  letter-spacing:.16em;
-  font-size:12px;
-  text-transform:uppercase;
-  cursor:pointer;
-}
+/* ===============================
+   PRODUCTS position (PC + Mobile)
+   Put dropdown under logo (left)
+================================ */
+.hero { position: relative; }
 
-.productsBtn:hover{ border-color:rgba(255,255,255,.22); }
-
-.productsBtn .chev{ margin-left:8px; }
-
-.productsDropdown{
-  position:absolute;
-  top:calc(100% + 12px);
-  left:0;
-  width:100%;
-  background:rgba(0,0,0,.85);
-  border:1px solid rgba(255,255,255,.12);
-  display:none;
-  flex-direction:column;
-  z-index:60;
-}
-
-.productsNav.open .productsDropdown{ display:flex; }
-
-.productsDropdown .ddItem{
-  width:100%;
-  text-align:left;
-  border-radius:0;
-  margin:0;
-  min-width:unset;
-}
-
-/* PRODUCTS DROPDOWN – FINAL CLEAN */
-.categoryPills--left {
+/* Desktop/tablet: place products under topbar-left */
+.categoryPills{
+  position: absolute;
+  top: 92px;
+  left: 22px;
+  right: auto;
+  width: auto;
+  margin: 0;
   justify-content: flex-start;
+  z-index: 50;
 }
 
-.productsNav {
-  position: relative;
-}
+.productsNav{ position: relative; }
 
-.productsBtn {
+/* PRODUCTS button (matches premium pill look) */
+.productsBtn{
   padding: 16px 20px;
   border: 1px solid rgba(255,255,255,.12);
   background: rgba(0,0,0,.25);
@@ -838,27 +804,122 @@ body{
   cursor: pointer;
 }
 
-.productsDropdown {
+.productsBtn .chev{ margin-left: 8px; }
+
+.productsDropdown{
   position: absolute;
   top: calc(100% + 12px);
   left: 0;
-  min-width: 220px;
+  right: auto;
+  min-width: 240px;
   padding: 10px;
-  background: rgba(0,0,0,.9);
+  background: rgba(0,0,0,.92);
   border: 1px solid rgba(255,255,255,.12);
   display: none;
   flex-direction: column;
   gap: 6px;
-  z-index: 60;
+  z-index: 9999;
 }
 
-.productsNav.open .productsDropdown {
-  display: flex;
-}
+.productsNav.open .productsDropdown{ display: flex; }
 
-.productsDropdown .pill {
+.productsDropdown .pill{
   width: 100%;
   text-align: left;
 }
 
+/* Mobile override */
+@media (max-width: 640px){
+  .categoryPills{
+    top: 88px;
+    left: 18px;
+  }
+  .productsDropdown{
+    min-width: 220px;
+  }
+}
 
+/* HELP button (white) */
+.helpBtn{
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-family: var(--fontHead);
+  font-weight: 800;
+  letter-spacing: .16em;
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 10px 12px;
+  opacity: .9;
+}
+.helpBtn:hover{ opacity: 1; }
+
+/* HELP modal */
+#helpModal.modal{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: none;
+}
+#helpModal.is-open{ display: block; }
+
+#helpModal .modal__overlay{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+}
+
+#helpModal .modal__panel{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(520px, 92vw);
+  background: rgba(0,0,0,.92);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  padding: 16px;
+}
+
+#helpModal .modal__top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+#helpModal .modal__title{
+  color: #fff;
+  font-family: var(--fontHead);
+  font-weight: 900;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  font-size: 14px;
+}
+
+#helpModal .modal__x{
+  border: 1px solid rgba(255,255,255,.14);
+  background: transparent;
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+
+#helpModal .modal__content{
+  padding-top: 12px;
+  color: rgba(255,255,255,.85);
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+.helpList{ margin: 0; padding-left: 18px; }
+.helpNote{
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  color: rgba(255,255,255,.75);
+}
