@@ -6,7 +6,7 @@
   <title>2FLY!GALLERIA — Shop</title>
   <link rel="stylesheet" href="./style.css" />
   <script src="./config.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="./app.js" defer></script>
 </head>
 <body class="page-shop" data-page="shop">
@@ -14,12 +14,27 @@
   <header class="topbar">
     <div class="topbar__left">
       <div class="brand">2FLY!GALLERIA</div>
+      
+      <!-- PRODUCTS DROPDOWN STACKED UNDER BRAND -->
+      <div class="productsNav">
+        <button class="productsBtn" id="productsToggle" type="button" aria-haspopup="true" aria-expanded="false">
+          PRODUCTS <span class="chev">▾</span>
+        </button>
+
+        <div class="productsDropdown" role="menu" aria-label="Browse products">
+          <button class="pill is-active" data-filter="Earrings" type="button" role="menuitem">EARRINGS</button>
+          <button class="pill" data-filter="Tank Tops" type="button" role="menuitem">TANK TOPS</button>
+          <button class="pill" data-filter="Boxers" type="button" role="menuitem">BOXERS</button>
+          <button class="pill" data-filter="Skull Caps" type="button" role="menuitem">SKULL CAPS</button>
+          <button class="pill" data-filter="Close Caps" type="button" role="menuitem">CLOSE CAPS</button>
+        </div>
+      </div>
     </div>
 
     <div class="topbar__right">
       <button id="helpBtn" class="helpBtn" type="button">HELP</button>
 
-        <button id="cartBtn" class="cartBadge" type="button" aria-label="Open cart">
+      <button id="cartBtn" class="cartBadge" type="button" aria-label="Open cart">
         <span class="cartBadge__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24">
             <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.2 6h14.1l-1.4 7.1c-.2.9-1 1.5-1.9 1.5H9.1c-.9 0-1.7-.6-1.9-1.5L5.3 2H2V0h4.9l.3 2H22v2H7.6l-.4 2z"/>
@@ -34,22 +49,6 @@
     <div class="hero__bg"></div>
 
     <div class="hero__content">
-      <div class="categoryPills">
-        <div class="productsNav">
-          <button class="productsBtn" id="productsToggle" type="button" aria-haspopup="true" aria-expanded="false">
-            PRODUCTS <span class="chev">▾</span>
-          </button>
-
-          <div class="productsDropdown" role="menu" aria-label="Browse products">
-            <button class="pill is-active" data-filter="Earrings" type="button" role="menuitem">EARRINGS</button>
-            <button class="pill" data-filter="Tank Tops" type="button" role="menuitem">TANK TOPS</button>
-            <button class="pill" data-filter="Boxers" type="button" role="menuitem">BOXERS</button>
-            <button class="pill" data-filter="Skull Caps" type="button" role="menuitem">SKULL CAPS</button>
-            <button class="pill" data-filter="Close Caps" type="button" role="menuitem">CLOSE CAPS</button>
-          </div>
-        </div>
-      </div>
-
       <div class="statsStrip">
         <div class="statCol">
           <div class="statBig">500K+</div>
@@ -80,7 +79,7 @@
 
   <footer class="footerBar">© 2FLY!GALLERIA • WHOLESALE SUPPLIER • PH NATIONWIDE</footer>
 
-  <!-- PRODUCT MODAL (hidden by default) -->
+  <!-- PRODUCT MODAL -->
   <div id="productModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-close="1"></div>
     <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Product details">
@@ -173,7 +172,6 @@
       </div>
     </div>
   </div>
-
 
   <!-- HELP MODAL -->
   <div class="modal" id="helpModal" aria-hidden="true">
