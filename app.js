@@ -78,9 +78,10 @@ async function initShop() {
 
   if (productsToggle) {
     productsToggle.addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
         productsNav.classList.toggle('open');
-        productsToggle.setAttribute('aria-expanded', productsNav.classList.contains('open'));
+        productsToggle.setAttribute('aria-expanded', productsNav.classList.contains('open') ? 'true' : 'false');
     });
     document.addEventListener('click', (e) => {
         if (!productsNav.contains(e.target)) {
@@ -106,6 +107,9 @@ async function initShop() {
   if (helpBtn && helpModal) {
     helpBtn.addEventListener('click', () => helpModal.classList.add('is-open'));
     $$('[data-help-close]').forEach(el => el.addEventListener('click', () => helpModal.classList.remove('is-open')));
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') helpModal.classList.remove('is-open');
+    });
   }
 
   const cartBtn = $('#cartBtn');
@@ -125,14 +129,14 @@ async function initShop() {
   const checkoutBtn = $('#checkoutBtn');
   const checkoutModal = $('#checkoutModal');
   const copyOrderBtn = $('#copyOrderBtn');
-  
+
   checkoutBtn.addEventListener('click', () => {
     if (cart.length === 0) return alert("Cart is empty!");
     toggleCart(false);
     checkoutModal.classList.add('is-open');
     generateOrderForm();
   });
-  
+
   $$('[data-close-checkout]').forEach(el => {
     el.addEventListener('click', () => checkoutModal.classList.remove('is-open'));
   });
@@ -178,7 +182,7 @@ async function initShop() {
 
   function renderGrid(products) {
     grid.innerHTML = '';
-    
+
     let filtered = products;
     if (activeFilter !== 'All' && activeFilter) {
        filtered = products.filter(p => p.category === activeFilter);
@@ -226,7 +230,7 @@ async function initShop() {
   const pMinus = $('#pMinus');
   const pPlus = $('#pPlus');
   const pAddBtn = $('#pAddBtn');
-  
+
   // DYNAMIC SIZING UI: Create the element once, insert it into DOM
   let pSizeRow = document.getElementById('pSizeRow');
   if (!pSizeRow) {
@@ -277,7 +281,6 @@ async function initShop() {
     pCode.textContent = p.code || '-';
 
     // --- SIZING LOGIC (Close Caps Only) ---
-    // User specifically requested: "not the skull caps just the close caps"
     if (p.category === 'Close Caps') {
         pSizeRow.style.display = 'grid'; 
         sizeSelect.value = "Standard"; // Default
@@ -291,7 +294,7 @@ async function initShop() {
         pAddBtn.disabled = true;
         pAddBtn.style.opacity = "0.5";
         pAddBtn.style.cursor = "not-allowed";
-        pSizeRow.style.display = 'none'; // Hide size if sold out (optional, looks cleaner)
+        pSizeRow.style.display = 'none';
     } else {
         pAddBtn.textContent = "ADD TO CART";
         pAddBtn.disabled = false;
@@ -318,12 +321,8 @@ async function initShop() {
   pAddBtn.addEventListener('click', () => {
     if(!currentP) return;
     const qty = parseInt(pQty.value) || 1;
-    
-    // Check if sizing is active
     let selectedSize = null;
-    if (pSizeRow.style.display !== 'none') {
-        selectedSize = sizeSelect.value;
-    }
+    if (pSizeRow.style.display !== 'none') selectedSize = sizeSelect.value;
 
     addToCart(currentP, qty, selectedSize);
     pModal.classList.remove('is-open');
@@ -337,16 +336,10 @@ async function initShop() {
   const cartTotalQty = $('#cartTotalQty');
 
   function addToCart(p, qty, size) {
-    // Generate a unique ID based on Product ID + Size
     const cartId = size ? `${p.id}-${size}` : `${p.id}`;
-    
     const ex = cart.find(x => x.cartId === cartId);
-    if(ex) {
-      ex.qty += qty;
-    } else {
-      // Store 'cartId' and 'size' in the object
-      cart.push({ ...p, qty, size, cartId });
-    }
+    if(ex) ex.qty += qty;
+    else cart.push({ ...p, qty, size, cartId });
     renderCart();
   }
 
@@ -377,8 +370,6 @@ async function initShop() {
 
       const row = document.createElement('div');
       row.className = 'cartItem';
-      
-      // Display Size if it exists
       const sizeHtml = item.size ? `<div style="font-size:11px; color:#aaa;">Size: ${item.size}</div>` : '';
 
       row.innerHTML = `
@@ -401,7 +392,7 @@ async function initShop() {
       row.querySelector('.trashBtn').addEventListener('click', () => removeFromCart(item.cartId));
       row.querySelector('.cMinus').addEventListener('click', () => updateCartQty(item.cartId, item.qty - 1));
       row.querySelector('.cPlus').addEventListener('click', () => updateCartQty(item.cartId, item.qty + 1));
-      
+
       const inp = row.querySelector('.cInp');
       inp.addEventListener('change', () => updateCartQty(item.cartId, parseInt(inp.value)||1));
 
@@ -426,19 +417,19 @@ async function initShop() {
     lines.push(`Address: ${addr}`);
     if(notes) lines.push(`Notes: ${notes}`);
     lines.push('-------------------------');
-    
+
     let total = 0;
     cart.forEach(item => {
       const sum = item.price * item.qty;
       total += sum;
-      
+
       let line = `• ${item.name} (x${item.qty}) - ${money(sum)}`;
-      if (item.size) line += ` [SIZE: ${item.size}]`; // Add size to order text
-      
+      if (item.size) line += ` [SIZE: ${item.size}]`;
+
       lines.push(line);
       if(item.code) lines.push(`   Code: ${item.code}`);
     });
-    
+
     lines.push('-------------------------');
     lines.push(`TOTAL: ${money(total)}`);
 
@@ -448,14 +439,14 @@ async function initShop() {
 
 
 /* ===========================
-   ADMIN LOGIC (UPDATED)
+   ADMIN LOGIC (UPDATED + FIXED)
    =========================== */
 let stagedImages = [];
 
 async function initAdmin() {
   const sb = getSupabase();
   const wrap = $('.adminWrap');
-  
+
   // Gate check
   const gate = document.createElement('div');
   gate.className = 'keyGate';
@@ -464,7 +455,7 @@ async function initAdmin() {
       <div class="keyGate__title">Admin Access</div>
       <div class="keyGate__text">Enter passkey to manage products.</div>
       <input type="password" class="keyGate__input" id="passKey" placeholder="Passkey..." />
-      <button class="btn btn--solid btn--wide" id="gateBtn">Unlock</button>
+      <button class="btn btn--solid btn--wide" id="gateBtn" type="button">Unlock</button>
       <div class="keyGate__hint">Hint: whou?</div>
     </div>
   `;
@@ -472,7 +463,7 @@ async function initAdmin() {
 
   const passInp = gate.querySelector('#passKey');
   const gateBtn = gate.querySelector('#gateBtn');
-  
+
   gateBtn.addEventListener('click', () => {
     if(passInp.value === 'admin123') {
       gate.remove();
@@ -497,8 +488,7 @@ async function initAdmin() {
   const uploadFilesBtn = $('#uploadFilesBtn');
   const imgList = $('#imgList');
   const msgDiv = $('#adminMsg');
-  
-  // Re-target adminProducts list
+
   const productsContainer = $('#adminProducts');
 
   function setMsg(txt, isErr=false) {
@@ -516,7 +506,7 @@ async function initAdmin() {
         <img src="${src}" />
         <div class="imgChip__row">
           <span style="font-size:10px; color:#aaa">Image ${idx+1}</span>
-          <button class="imgChip__btn">✕</button>
+          <button class="imgChip__btn" type="button">✕</button>
         </div>
       `;
       d.querySelector('button').addEventListener('click', () => {
@@ -527,7 +517,8 @@ async function initAdmin() {
     });
   }
 
-  addUrlBtn.addEventListener('click', () => {
+  addUrlBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     const val = aImageUrl.value.trim();
     if (val) {
       stagedImages.push(val);
@@ -536,7 +527,8 @@ async function initAdmin() {
     }
   });
 
-  uploadFilesBtn.addEventListener('click', async () => {
+  uploadFilesBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
     const files = aFiles.files;
     if (!files || files.length === 0) return;
     if (!sb) return alert("Supabase not configured");
@@ -548,8 +540,8 @@ async function initAdmin() {
       const file = files[i];
       const ext = file.name.split('.').pop();
       const fileName = `upload_${Date.now()}_${i}.${ext}`;
-      
-      const { data, error } = await sb.storage
+
+      const { error } = await sb.storage
         .from('public_image')
         .upload(fileName, file);
 
@@ -560,20 +552,21 @@ async function initAdmin() {
         const { data: { publicUrl } } = sb.storage
           .from('public_image')
           .getPublicUrl(fileName);
-        
+
         stagedImages.push(publicUrl);
       }
     }
-    
+
     renderStaged();
     aFiles.value = '';
     uploadFilesBtn.disabled = false;
     setMsg('Uploads complete.');
   });
 
-  createProductBtn.addEventListener('click', async () => {
+  createProductBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
     if(!sb) return;
-    
+
     const name = (aName?.value || '').trim();
     const price = Number((aPrice?.value || '').trim());
     const code = (aCode?.value || '').trim();
@@ -583,7 +576,7 @@ async function initAdmin() {
     const sold_out = Boolean(aSoldOut?.checked);
 
     if (!name) return setMsg('Name is required.', true);
-    
+
     const payload = {
       name,
       price,
@@ -617,18 +610,18 @@ async function initAdmin() {
     createProductBtn.disabled = false;
   });
 
-  // --- NEW: Toggle Logic in List ---
+  // --- Toggle Logic in List ---
   async function loadAdminProducts() {
     if(!sb) return;
     productsContainer.innerHTML = 'Loading...';
 
-    // Fetch ALL products (active AND inactive)
     const { data, error } = await sb
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
 
     if(error) {
+      console.error(error);
       productsContainer.textContent = 'Error loading.';
       return;
     }
@@ -637,11 +630,10 @@ async function initAdmin() {
     data.forEach(p => {
       const div = document.createElement('div');
       div.className = 'adminItem';
-      
+
       let img = p.image_url;
       if(Array.isArray(p.images) && p.images.length > 0) img = p.images[0];
 
-      // Define styles for status
       const isInactive = p.status === 'inactive';
       const isSoldOut = p.sold_out;
 
@@ -657,40 +649,53 @@ async function initAdmin() {
           </div>
           ${img ? `<img src="${img}" style="width:40px;height:40px;object-fit:cover;border:1px solid #333">` : ''}
         </div>
-        
+
         <div class="adminItem__btns" style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
-          
-          <button class="btn btn--ghost toggleStatusBtn" style="padding:8px 12px; font-size:10px;">
+          <button type="button" class="btn btn--ghost toggleStatusBtn" style="padding:8px 12px; font-size:10px;">
             ${isInactive ? 'SHOW (Set Active)' : 'HIDE (Set Inactive)'}
           </button>
 
-          <button class="btn btn--ghost toggleSoldBtn" style="padding:8px 12px; font-size:10px;">
+          <button type="button" class="btn btn--ghost toggleSoldBtn" style="padding:8px 12px; font-size:10px;">
             ${isSoldOut ? 'Mark Available' : 'Mark Sold Out'}
           </button>
 
-          <button class="btn btn--ghost delBtn" style="padding:8px 12px; font-size:10px; border-color:#552222; color:#faa;">DELETE</button>
+          <button type="button" class="btn btn--ghost delBtn" style="padding:8px 12px; font-size:10px; border-color:#552222; color:#faa;">DELETE</button>
         </div>
       `;
 
-      // 1. DELETE
+      // DELETE
       div.querySelector('.delBtn').addEventListener('click', async () => {
         if(confirm(`Delete "${p.name}"? This cannot be undone.`)) {
-          await sb.from('products').delete().eq('id', p.id);
+          const { error: delErr } = await sb.from('products').delete().eq('id', p.id);
+          if (delErr) {
+            console.error(delErr);
+            alert('Delete failed: ' + delErr.message);
+            return;
+          }
           loadAdminProducts();
         }
       });
 
-      // 2. TOGGLE STATUS (Hide/Show)
+      // TOGGLE STATUS (Hide/Show)
       div.querySelector('.toggleStatusBtn').addEventListener('click', async () => {
         const newStatus = isInactive ? 'active' : 'inactive';
-        // Optimistic update UI? Better to reload to be sure.
-        await sb.from('products').update({ status: newStatus }).eq('id', p.id);
+        const { error: updErr } = await sb.from('products').update({ status: newStatus }).eq('id', p.id);
+        if (updErr) {
+          console.error(updErr);
+          alert('Failed to update status: ' + updErr.message);
+          return;
+        }
         loadAdminProducts();
       });
 
-      // 3. TOGGLE SOLD OUT
+      // TOGGLE SOLD OUT
       div.querySelector('.toggleSoldBtn').addEventListener('click', async () => {
-        await sb.from('products').update({ sold_out: !isSoldOut }).eq('id', p.id);
+        const { error: soldErr } = await sb.from('products').update({ sold_out: !isSoldOut }).eq('id', p.id);
+        if (soldErr) {
+          console.error(soldErr);
+          alert('Failed to update sold out: ' + soldErr.message);
+          return;
+        }
         loadAdminProducts();
       });
 
@@ -698,4 +703,3 @@ async function initAdmin() {
     });
   }
 }
-
