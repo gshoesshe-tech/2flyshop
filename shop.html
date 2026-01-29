@@ -6,7 +6,7 @@
   <title>2FLY!GALLERIA — Shop</title>
   <link rel="stylesheet" href="./style.css" />
   <script src="./config.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="./app.js" defer></script>
 </head>
 <body class="page-shop" data-page="shop">
@@ -32,13 +32,19 @@
     <div class="hero__bg"></div>
 
     <div class="hero__content">
-      <div class="categoryPills">
-        <button class="pill is-active" data-filter="Earrings" type="button">EARRINGS</button>
-        <button class="pill" data-filter="TANK TOP" type="button">TANK TOP</button>
-        <button class="pill" data-filter="Boxers" type="button">BOXERS</button>
-        <button class="pill" data-filter="ALL" type="button">VIEW ALL</button>
+      
+      <div class="filterWrap">
+        <label for="categorySelect" class="filterLabel">FILTER BY CATEGORY:</label>
+        <div class="selectWrapper">
+          <select id="categorySelect" class="filterSelect">
+            <option value="ALL">VIEW ALL</option>
+            <option value="Earrings">EARRINGS</option>
+            <option value="Tank Tops">TANK TOPS</option>
+            <option value="Skull Caps">SKULL CAPS</option>
+            <option value="Caps">CAPS</option>
+          </select>
+        </div>
       </div>
-
       <div class="statsStrip">
         <div class="statCol">
           <div class="statBig">500K+</div>
@@ -54,7 +60,7 @@
         </div>
       </div>
 
-      <a class="joinBtn" href="https://t.me/+ZTWqZ27wQ6RjMzY1" target="_blank" rel="noreferrer">
+      <a class="joinBtn" href="https://m.me/cm/AbYv958c_1Ex59E-/?send_source=cm:copy_invite_link" target="_blank" rel="noreferrer">
         JOIN 2FLY RESELLER COMMUNITY NOW
       </a>
     </div>
@@ -69,7 +75,6 @@
 
   <footer class="footerBar">© 2FLY!GALLERIA • WHOLESALE SUPPLIER • PH NATIONWIDE</footer>
 
-  <!-- PRODUCT MODAL (hidden by default) -->
   <div id="productModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-close="1"></div>
     <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Product details">
@@ -104,7 +109,6 @@
     </div>
   </div>
 
-  <!-- CART DRAWER -->
   <div id="cartOverlay" class="drawerOverlay" hidden></div>
   <aside id="cartDrawer" class="drawer" aria-hidden="true">
     <div class="drawer__top">
@@ -130,7 +134,6 @@
     </div>
   </aside>
 
-  <!-- CHECKOUT MODAL -->
   <div id="checkoutModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-close-checkout="1"></div>
     <div class="modal__panel modal__panel--checkout" role="dialog" aria-modal="true" aria-label="Checkout">
