@@ -110,26 +110,116 @@ body{
   pointer-events:auto;
 }
 
-/* ---------------- Shop / Header ---------------- */
+/* ---------------- Shop / Header (UPDATED) ---------------- */
 .topbar{
   position:sticky;
   top:0;
   z-index:50;
-  height:76px;
+  min-height:76px;
   display:flex;
-  align-items:center;
+  align-items:flex-start; /* Aligns items to top to accommodate vertical stack */
   justify-content:space-between;
-  padding:0 22px;
-  background:rgba(0,0,0,.60);
+  padding:14px 22px;
+  background:rgba(0,0,0,.85);
   backdrop-filter: blur(10px);
   border-bottom:1px solid rgba(255,255,255,.06);
 }
+.topbar__left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding-top: 4px; 
+}
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
 .brand{
   font-family:var(--fontHead);
   font-weight:900;
   letter-spacing:.02em;
   font-size:26px;
+  line-height: 1;
 }
+
+/* --- Products Dropdown (NEW) --- */
+.productsNav { position: relative; }
+.productsBtn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-family: var(--fontHead);
+  font-weight: 800;
+  letter-spacing: .16em;
+  font-size: 11px;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+.productsBtn:hover { color: #fff; }
+.productsBtn .chev { margin-left: 6px; font-size: 9px; }
+
+.productsDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: rgba(10,10,10,0.95);
+  border: 1px solid rgba(255,255,255,.15);
+  padding: 8px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 9999;
+  margin-top: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.productsNav.open .productsDropdown { display: flex; }
+
+.productsDropdown .pill {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.7);
+  padding: 10px 14px;
+  font-family: var(--fontHead);
+  font-weight: 800;
+  letter-spacing: .16em;
+  font-size: 11px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.productsDropdown .pill:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.productsDropdown .pill.is-active { background: #fff; color: #000; }
+
+
+/* --- Help Button (UPDATED - No Border) --- */
+.helpBtn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-family: var(--fontHead);
+  font-weight: 800;
+  letter-spacing: .16em;
+  font-size: 11px;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 12px 14px;
+  display: grid;
+  place-items: center;
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+.helpBtn:hover { opacity: 1; }
 
 .cartBadge{
   width:54px;
@@ -141,7 +231,9 @@ body{
   place-items:center;
   position:relative;
   cursor:pointer;
+  transition: all 0.2s ease;
 }
+.cartBadge:hover { border-color: rgba(255,255,255,0.6); }
 .cartBadge svg{ width:19px; height:19px; fill:#fff; opacity:.95; }
 .cartBadge__count {
   position:absolute;
@@ -183,39 +275,19 @@ body{
   gap:38px;
 }
 
-.categoryPills{
-  display:flex;
-  gap:16px;
-  flex-wrap:wrap;
-  justify-content:center;
-}
-.pill{
-  min-width:160px;
-  padding:16px 18px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.25);
-  color:#fff;
-  font-family:var(--fontHead);
-  font-weight:800;
-  letter-spacing:.16em;
-  font-size:12px;
-  text-transform:uppercase;
-  cursor:pointer;
-}
-.pill:hover{ border-color:rgba(255,255,255,.22); }
-.pill.is-active{
-  background:#fff;
-  color:#000;
-  border-color:#fff;
-}
-
+/* Stats */
 .statsStrip{
   width:min(1100px, 92%);
   display:grid;
   grid-template-columns: repeat(3, 1fr);
   gap:40px;
-  align-items:end;
+  align-items:center;
   text-align:center;
+}
+.statCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .statBig{
   font-family:var(--fontHead);
@@ -770,92 +842,7 @@ body{
   .qtyRow{ grid-template-columns: 42px 86px 42px 1fr; }
 }
 
-/* ===============================
-   PRODUCTS position (PC + Mobile)
-   Put dropdown under logo (left)
-================================ */
-.hero { position: relative; }
-
-/* Desktop/tablet: place products under topbar-left */
-.categoryPills{
-  position: absolute;
-  top: 92px;
-  left: 22px;
-  right: auto;
-  width: auto;
-  margin: 0;
-  justify-content: flex-start;
-  z-index: 50;
-}
-
-.productsNav{ position: relative; }
-
-/* PRODUCTS button (matches premium pill look) */
-.productsBtn{
-  padding: 16px 20px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.25);
-  color: #fff;
-  font-family: var(--fontHead);
-  font-weight: 800;
-  letter-spacing: .16em;
-  font-size: 12px;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.productsBtn .chev{ margin-left: 8px; }
-
-.productsDropdown{
-  position: absolute;
-  top: calc(100% + 12px);
-  left: 0;
-  right: auto;
-  min-width: 240px;
-  padding: 10px;
-  background: rgba(0,0,0,.92);
-  border: 1px solid rgba(255,255,255,.12);
-  display: none;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 9999;
-}
-
-.productsNav.open .productsDropdown{ display: flex; }
-
-.productsDropdown .pill{
-  width: 100%;
-  text-align: left;
-}
-
-/* Mobile override */
-@media (max-width: 640px){
-  .categoryPills{
-    top: 88px;
-    left: 18px;
-  }
-  .productsDropdown{
-    min-width: 220px;
-  }
-}
-
-/* HELP button (white) */
-.helpBtn{
-  border: 0;
-  background: transparent;
-  color: #fff;
-  font-family: var(--fontHead);
-  font-weight: 800;
-  letter-spacing: .16em;
-  font-size: 12px;
-  text-transform: uppercase;
-  cursor: pointer;
-  padding: 10px 12px;
-  opacity: .9;
-}
-.helpBtn:hover{ opacity: 1; }
-
-/* HELP modal */
+/* HELP Modal */
 #helpModal.modal{
   position: fixed;
   inset: 0;
