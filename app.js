@@ -116,18 +116,23 @@ function initShop() {
   loadCart();
   wireCartUI();
 
+
   // PRODUCTS dropdown toggle (UI only)
   const productsToggle = document.getElementById("productsToggle");
   const productsNav = document.querySelector(".productsNav");
 
   productsToggle?.addEventListener("click", (e) => {
     e.preventDefault();
+    e.stopPropagation(); // prevent the document click handler from instantly closing it
     productsNav?.classList.toggle("open");
-    productsToggle.setAttribute("aria-expanded", productsNav?.classList.contains("open") ? "true" : "false");
+    productsToggle?.setAttribute(
+      "aria-expanded",
+      productsNav?.classList.contains("open") ? "true" : "false"
+    );
   });
 
   // Close dropdown after selection
-  document.querySelectorAll(".productsDropdown .pill").forEach(btn => {
+  document.querySelectorAll(".productsDropdown .pill").forEach((btn) => {
     btn.addEventListener("click", () => {
       productsNav?.classList.remove("open");
       productsToggle?.setAttribute("aria-expanded", "false");
@@ -142,7 +147,6 @@ function initShop() {
       productsToggle?.setAttribute("aria-expanded", "false");
     }
   });
-
 
   const sb = getSupabase(); // Use the safe getter
   const grid = $("#productsGrid");
