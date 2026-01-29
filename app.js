@@ -112,6 +112,27 @@ function initShop() {
   loadCart();
   wireCartUI();
 
+  // ✅ PASTE IT HERE (dropdown open/close only)
+  const productsToggle = document.getElementById("productsToggle");
+  const productsNav = document.querySelector(".productsNav");
+
+  productsToggle?.addEventListener("click", () => {
+    productsNav?.classList.toggle("open");
+  });
+
+  document.querySelectorAll(".productsDropdown .pill").forEach(btn => {
+    btn.addEventListener("click", () => {
+      productsNav?.classList.remove("open");
+    });
+  });
+
+  // then continue your existing code…
+  const sb = getSupabase();
+  const grid = $("#productsGrid");
+  const empty = $("#emptyState");
+  // ...
+}
+
   const sb = getSupabase();
   const grid = $("#productsGrid");
   const empty = $("#emptyState");
@@ -546,3 +567,4 @@ function bootstrap() {
   if (p === 'admin') initAdmin();
 }
 document.addEventListener('DOMContentLoaded', bootstrap);
+
