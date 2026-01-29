@@ -1,6 +1,6 @@
-/* 2FLY Wholesale System (Fixed)
-   - Handles Landing, Shop, and Admin logic
-   - Requires Supabase setup in config.js
+/* 2FLY Wholesale System (Updated)
+   - Added Size Selector for "Close Caps" only
+   - Added Admin Toggle buttons (Hide/Show, Sold Out) to preserve product order
 */
 
 const SUPABASE_URL = (window.__SUPABASE_URL__ || '').trim();
@@ -10,7 +10,6 @@ let __sb = null;
 
 // --- Helper Functions ---
 
-// 1. FIX: Added the missing money formatting function
 function money(val) {
   return '₱' + (Number(val) || 0).toLocaleString('en-US');
 }
@@ -25,13 +24,6 @@ function getSupabase() {
   return __sb;
 }
 
-function clampInt(v, min = 1) {
-  const n = parseInt(v, 10);
-  if (!Number.isFinite(n) || isNaN(n)) return min;
-  return Math.max(min, n);
-}
-
-// Shortcut selectors
 const $ = (sel, p = document) => p.querySelector(sel);
 const $$ = (sel, p = document) => p.querySelectorAll(sel);
 
@@ -41,12 +33,10 @@ const $$ = (sel, p = document) => p.querySelectorAll(sel);
 document.addEventListener('DOMContentLoaded', async () => {
   const page = document.body.dataset.page;
 
-  // 1) LANDING PAGE
   if (page === 'landing') {
     const btn = $('#enterBtn');
     if (btn) {
       btn.addEventListener('click', () => {
-        // Simple fade out
         const fade = document.createElement('div');
         fade.className = 'landing__fade';
         document.body.appendChild(fade);
@@ -58,12 +48,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 2) SHOP PAGE
   if (page === 'shop') {
     initShop();
   }
 
-  // 3) ADMIN PAGE
   if (page === 'admin') {
     initAdmin();
   }
@@ -75,14 +63,14 @@ document.addEventListener('DOMContentLoaded', async () => {
    =========================== */
 let allProducts = [];
 let cart = [];
-let activeFilter = "Earrings"; // Default
+let activeFilter = "Earrings"; 
 
 async function initShop() {
   const sb = getSupabase();
   const grid = $('#productsGrid');
   const empty = $('#emptyState');
 
-  // --- Products Dropdown Logic (NEW) ---
+  // --- Products Dropdown Logic ---
   const productsNav = $('.productsNav');
   const productsToggle = $('#productsToggle');
   const productsDropdown = $('.productsDropdown');
@@ -94,48 +82,32 @@ async function initShop() {
         productsNav.classList.toggle('open');
         productsToggle.setAttribute('aria-expanded', productsNav.classList.contains('open'));
     });
-
-    // Close on click outside
     document.addEventListener('click', (e) => {
         if (!productsNav.contains(e.target)) {
             productsNav.classList.remove('open');
             productsToggle.setAttribute('aria-expanded', 'false');
         }
     });
-
-    // Pill click
     pills.forEach(pill => {
         pill.addEventListener('click', () => {
-            // Update active state
             pills.forEach(p => p.classList.remove('is-active'));
             pill.classList.add('is-active');
-            
-            // Set filter
             activeFilter = pill.dataset.filter;
-            
-            // Close dropdown
             productsNav.classList.remove('open');
             productsToggle.setAttribute('aria-expanded', 'false');
-
-            // Render
             renderGrid(allProducts);
         });
     });
   }
 
-  // Help Modal
+  // Help & Cart Toggles
   const helpBtn = $('#helpBtn');
   const helpModal = $('#helpModal');
   if (helpBtn && helpModal) {
     helpBtn.addEventListener('click', () => helpModal.classList.add('is-open'));
-    
-    // Close handlers
-    $$('[data-help-close]').forEach(el => {
-      el.addEventListener('click', () => helpModal.classList.remove('is-open'));
-    });
+    $$('[data-help-close]').forEach(el => el.addEventListener('click', () => helpModal.classList.remove('is-open')));
   }
 
-  // Cart Drawer
   const cartBtn = $('#cartBtn');
   const cartDrawer = $('#cartDrawer');
   const cartOverlay = $('#cartOverlay');
@@ -149,7 +121,7 @@ async function initShop() {
   closeCartBtn.addEventListener('click', () => toggleCart(false));
   cartOverlay.addEventListener('click', () => toggleCart(false));
 
-  // Checkout Modal
+  // Checkout
   const checkoutBtn = $('#checkoutBtn');
   const checkoutModal = $('#checkoutModal');
   const copyOrderBtn = $('#copyOrderBtn');
@@ -161,12 +133,10 @@ async function initShop() {
     generateOrderForm();
   });
   
-  // Close checkout
   $$('[data-close-checkout]').forEach(el => {
     el.addEventListener('click', () => checkoutModal.classList.remove('is-open'));
   });
 
-  // Inputs in checkout -> update order text
   ['cName','cPhone','cAddress','cNotes'].forEach(id => {
     const el = $('#'+id);
     if(el) el.addEventListener('input', generateOrderForm);
@@ -189,11 +159,11 @@ async function initShop() {
     return;
   }
 
-  // Fetch
+  // FETCH: Only active items for customers
   const { data, error } = await sb
     .from('products')
     .select('*')
-    .eq('status', 'active')
+    .eq('status', 'active') 
     .order('created_at', { ascending: false });
 
   if (error || !data) {
@@ -209,7 +179,6 @@ async function initShop() {
   function renderGrid(products) {
     grid.innerHTML = '';
     
-    // Filter
     let filtered = products;
     if (activeFilter !== 'All' && activeFilter) {
        filtered = products.filter(p => p.category === activeFilter);
@@ -223,20 +192,21 @@ async function initShop() {
     empty.hidden = true;
 
     filtered.forEach(p => {
-      // images array support (backward compat with single image_url)
       let img = p.image_url;
-      if (Array.isArray(p.images) && p.images.length > 0) {
-        img = p.images[0];
-      }
+      if (Array.isArray(p.images) && p.images.length > 0) img = p.images[0];
 
       const el = document.createElement('div');
       el.className = 'card';
+      // Visual cue for sold out
+      if(p.sold_out) el.style.opacity = '0.7';
+
       el.innerHTML = `
         <img class="card__img" src="${img || ''}" loading="lazy" />
         <div class="card__body">
           <div class="card__name">${p.name}</div>
           <div class="card__price">${money(p.price)}</div>
         </div>
+        ${p.sold_out ? '<div style="position:absolute;top:10px;right:10px;background:#c00;color:#fff;font-size:10px;padding:4px 8px;font-weight:bold;">SOLD OUT</div>' : ''}
       `;
       el.addEventListener('click', () => openProduct(p));
       grid.appendChild(el);
@@ -256,6 +226,29 @@ async function initShop() {
   const pMinus = $('#pMinus');
   const pPlus = $('#pPlus');
   const pAddBtn = $('#pAddBtn');
+  
+  // DYNAMIC SIZING UI: Create the element once, insert it into DOM
+  let pSizeRow = document.getElementById('pSizeRow');
+  if (!pSizeRow) {
+      pSizeRow = document.createElement('div');
+      pSizeRow.className = 'qtyRow'; 
+      pSizeRow.id = 'pSizeRow';
+      pSizeRow.style.display = 'none'; // Hidden by default
+      pSizeRow.innerHTML = `
+        <span class="muted" style="font-size:12px; font-weight:700; width:50px;">SIZE:</span>
+        <select id="pSizeSelect" class="qtyInput" style="width:100%; text-align:left; font-size:12px; padding-left:10px; grid-column:span 3;">
+            <option value="Standard">Standard</option>
+            <option value="Small">Small</option>
+            <option value="Large">Large</option>
+        </select>
+      `;
+      // Insert size row before Qty row
+      const infoDiv = $('.pview__info');
+      const qtyRow = $('.qtyRow');
+      infoDiv.insertBefore(pSizeRow, qtyRow);
+  }
+  const sizeSelect = $('#pSizeSelect');
+
   let currentP = null;
 
   function openProduct(p) {
@@ -267,18 +260,13 @@ async function initShop() {
     if (Array.isArray(p.images) && p.images.length > 0) imgs = p.images;
     else if (p.image_url) imgs = [p.image_url];
 
-    // Set main
     pMainImg.src = imgs[0] || '';
-    
-    // Thumbs
     pThumbs.innerHTML = '';
     imgs.forEach(src => {
       const t = document.createElement('div');
       t.className = 'thumb';
       t.innerHTML = `<img src="${src}" />`;
-      t.addEventListener('click', () => {
-        pMainImg.src = src;
-      });
+      t.addEventListener('click', () => pMainImg.src = src);
       pThumbs.appendChild(t);
     });
 
@@ -287,6 +275,29 @@ async function initShop() {
     pCategory.textContent = p.category || '-';
     pSku.textContent = p.sku || '-';
     pCode.textContent = p.code || '-';
+
+    // --- SIZING LOGIC (Close Caps Only) ---
+    // User specifically requested: "not the skull caps just the close caps"
+    if (p.category === 'Close Caps') {
+        pSizeRow.style.display = 'grid'; 
+        sizeSelect.value = "Standard"; // Default
+    } else {
+        pSizeRow.style.display = 'none'; 
+    }
+
+    // --- SOLD OUT LOGIC ---
+    if (p.sold_out) {
+        pAddBtn.textContent = "SOLD OUT";
+        pAddBtn.disabled = true;
+        pAddBtn.style.opacity = "0.5";
+        pAddBtn.style.cursor = "not-allowed";
+        pSizeRow.style.display = 'none'; // Hide size if sold out (optional, looks cleaner)
+    } else {
+        pAddBtn.textContent = "ADD TO CART";
+        pAddBtn.disabled = false;
+        pAddBtn.style.opacity = "1";
+        pAddBtn.style.cursor = "pointer";
+    }
 
     pModal.classList.add('is-open');
   }
@@ -307,34 +318,45 @@ async function initShop() {
   pAddBtn.addEventListener('click', () => {
     if(!currentP) return;
     const qty = parseInt(pQty.value) || 1;
-    addToCart(currentP, qty);
+    
+    // Check if sizing is active
+    let selectedSize = null;
+    if (pSizeRow.style.display !== 'none') {
+        selectedSize = sizeSelect.value;
+    }
+
+    addToCart(currentP, qty, selectedSize);
     pModal.classList.remove('is-open');
-    toggleCart(true); // Open cart to show it
+    toggleCart(true); 
   });
 
-  // --- Cart Logic ---
+  // --- Cart Logic (Updated for Sizes) ---
   const cartItemsDiv = $('#cartItems');
   const cartCount = $('#cartCount');
   const cartSubtotal = $('#cartSubtotal');
   const cartTotalQty = $('#cartTotalQty');
 
-  function addToCart(p, qty) {
-    const ex = cart.find(x => x.id === p.id);
+  function addToCart(p, qty, size) {
+    // Generate a unique ID based on Product ID + Size
+    const cartId = size ? `${p.id}-${size}` : `${p.id}`;
+    
+    const ex = cart.find(x => x.cartId === cartId);
     if(ex) {
       ex.qty += qty;
     } else {
-      cart.push({ ...p, qty });
+      // Store 'cartId' and 'size' in the object
+      cart.push({ ...p, qty, size, cartId });
     }
     renderCart();
   }
 
-  function removeFromCart(id) {
-    cart = cart.filter(x => x.id !== id);
+  function removeFromCart(cartId) {
+    cart = cart.filter(x => x.cartId !== cartId);
     renderCart();
   }
 
-  function updateCartQty(id, newQ) {
-    const item = cart.find(x => x.id === id);
+  function updateCartQty(cartId, newQ) {
+    const item = cart.find(x => x.cartId === cartId);
     if(item) {
       item.qty = Math.max(1, newQ);
       renderCart();
@@ -355,11 +377,16 @@ async function initShop() {
 
       const row = document.createElement('div');
       row.className = 'cartItem';
+      
+      // Display Size if it exists
+      const sizeHtml = item.size ? `<div style="font-size:11px; color:#aaa;">Size: ${item.size}</div>` : '';
+
       row.innerHTML = `
         <img class="cartItem__img" src="${img||''}" />
         <div>
           <div class="cartItem__name">${item.name}</div>
           <div class="cartItem__meta">${money(item.price)}</div>
+          ${sizeHtml}
           <div class="cartItem__row">
             <div class="cartQty">
               <button class="cMinus">−</button>
@@ -371,13 +398,12 @@ async function initShop() {
         <button class="trashBtn">🗑</button>
       `;
 
-      // Events
-      row.querySelector('.trashBtn').addEventListener('click', () => removeFromCart(item.id));
-      row.querySelector('.cMinus').addEventListener('click', () => updateCartQty(item.id, item.qty - 1));
-      row.querySelector('.cPlus').addEventListener('click', () => updateCartQty(item.id, item.qty + 1));
+      row.querySelector('.trashBtn').addEventListener('click', () => removeFromCart(item.cartId));
+      row.querySelector('.cMinus').addEventListener('click', () => updateCartQty(item.cartId, item.qty - 1));
+      row.querySelector('.cPlus').addEventListener('click', () => updateCartQty(item.cartId, item.qty + 1));
       
       const inp = row.querySelector('.cInp');
-      inp.addEventListener('change', () => updateCartQty(item.id, parseInt(inp.value)||1));
+      inp.addEventListener('change', () => updateCartQty(item.cartId, parseInt(inp.value)||1));
 
       cartItemsDiv.appendChild(row);
     });
@@ -405,8 +431,11 @@ async function initShop() {
     cart.forEach(item => {
       const sum = item.price * item.qty;
       total += sum;
-      lines.push(`• ${item.name} (x${item.qty}) - ${money(sum)}`);
-      // Include code/sku if needed
+      
+      let line = `• ${item.name} (x${item.qty}) - ${money(sum)}`;
+      if (item.size) line += ` [SIZE: ${item.size}]`; // Add size to order text
+      
+      lines.push(line);
       if(item.code) lines.push(`   Code: ${item.code}`);
     });
     
@@ -419,15 +448,15 @@ async function initShop() {
 
 
 /* ===========================
-   ADMIN LOGIC
+   ADMIN LOGIC (UPDATED)
    =========================== */
-let stagedImages = []; // Strings (URLs)
+let stagedImages = [];
 
 async function initAdmin() {
   const sb = getSupabase();
   const wrap = $('.adminWrap');
   
-  // Gate check (Simple password)
+  // Gate check
   const gate = document.createElement('div');
   gate.className = 'keyGate';
   gate.innerHTML = `
@@ -462,16 +491,15 @@ async function initAdmin() {
   const aCategory = $('#aCategory');
   const aStatus = $('#aStatus');
   const aSoldOut = $('#aSoldOut');
-  
-  // Image handling
-  const aImageUrl = $('#aImageUrl'); // URL input
+  const aImageUrl = $('#aImageUrl');
   const addUrlBtn = $('#addUrlBtn');
-  const aFiles = $('#aFiles');       // File input
+  const aFiles = $('#aFiles'); 
   const uploadFilesBtn = $('#uploadFilesBtn');
   const imgList = $('#imgList');
-
   const msgDiv = $('#adminMsg');
-  const productsList = $('#adminProductsList');
+  
+  // Re-target adminProducts list
+  const productsContainer = $('#adminProducts');
 
   function setMsg(txt, isErr=false) {
     msgDiv.textContent = txt;
@@ -479,7 +507,6 @@ async function initAdmin() {
     setTimeout(() => msgDiv.textContent = '', 4000);
   }
 
-  // --- Image staging ---
   function renderStaged() {
     imgList.innerHTML = '';
     stagedImages.forEach((src, idx) => {
@@ -500,7 +527,6 @@ async function initAdmin() {
     });
   }
 
-  // Add URL manually
   addUrlBtn.addEventListener('click', () => {
     const val = aImageUrl.value.trim();
     if (val) {
@@ -510,7 +536,6 @@ async function initAdmin() {
     }
   });
 
-  // Upload Files to Supabase Storage
   uploadFilesBtn.addEventListener('click', async () => {
     const files = aFiles.files;
     if (!files || files.length === 0) return;
@@ -524,7 +549,6 @@ async function initAdmin() {
       const ext = file.name.split('.').pop();
       const fileName = `upload_${Date.now()}_${i}.${ext}`;
       
-      // Upload to "public_image" bucket (ensure it exists and is public)
       const { data, error } = await sb.storage
         .from('public_image')
         .upload(fileName, file);
@@ -533,7 +557,6 @@ async function initAdmin() {
         console.error(error);
         setMsg(`Upload failed: ${file.name}`, true);
       } else {
-        // Get public URL
         const { data: { publicUrl } } = sb.storage
           .from('public_image')
           .getPublicUrl(fileName);
@@ -543,13 +566,11 @@ async function initAdmin() {
     }
     
     renderStaged();
-    aFiles.value = ''; // clear input
+    aFiles.value = '';
     uploadFilesBtn.disabled = false;
     setMsg('Uploads complete.');
   });
 
-
-  // --- Create Product ---
   createProductBtn.addEventListener('click', async () => {
     if(!sb) return;
     
@@ -563,7 +584,6 @@ async function initAdmin() {
 
     if (!name) return setMsg('Name is required.', true);
     
-    // Create product object
     const payload = {
       name,
       price,
@@ -573,7 +593,7 @@ async function initAdmin() {
       status,
       sold_out,
       images: stagedImages,
-      image_url: stagedImages[0] || null // backward compat
+      image_url: stagedImages[0] || null
     };
 
     createProductBtn.disabled = true;
@@ -586,7 +606,6 @@ async function initAdmin() {
       setMsg(`Failed: ${error.message}`, true);
     } else {
       setMsg('Created ✅');
-      // Reset form
       if(aName) aName.value = "";
       if(aPrice) aPrice.value = "";
       if(aCode) aCode.value = "";
@@ -598,22 +617,23 @@ async function initAdmin() {
     createProductBtn.disabled = false;
   });
 
-  // --- List & Delete ---
+  // --- NEW: Toggle Logic in List ---
   async function loadAdminProducts() {
     if(!sb) return;
-    productsList.innerHTML = 'Loading...';
+    productsContainer.innerHTML = 'Loading...';
 
+    // Fetch ALL products (active AND inactive)
     const { data, error } = await sb
       .from('products')
       .select('*')
       .order('created_at', { ascending: false });
 
     if(error) {
-      productsList.textContent = 'Error loading.';
+      productsContainer.textContent = 'Error loading.';
       return;
     }
 
-    productsList.innerHTML = '';
+    productsContainer.innerHTML = '';
     data.forEach(p => {
       const div = document.createElement('div');
       div.className = 'adminItem';
@@ -621,30 +641,60 @@ async function initAdmin() {
       let img = p.image_url;
       if(Array.isArray(p.images) && p.images.length > 0) img = p.images[0];
 
+      // Define styles for status
+      const isInactive = p.status === 'inactive';
+      const isSoldOut = p.sold_out;
+
       div.innerHTML = `
         <div class="adminItem__top">
           <div>
             <div class="adminItem__name">${p.name}</div>
             <div class="adminItem__meta">${p.category} • ${money(p.price)}</div>
             <div class="adminItem__meta" style="font-size:11px; margin-top:2px;">
-               Status: ${p.status} ${p.sold_out ? '(SOLD OUT)' : ''}
+               ${isInactive ? '🔴 INACTIVE (Hidden)' : '🟢 ACTIVE'} 
+               ${isSoldOut ? ' • ⚠️ SOLD OUT' : ''}
             </div>
           </div>
           ${img ? `<img src="${img}" style="width:40px;height:40px;object-fit:cover;border:1px solid #333">` : ''}
         </div>
-        <div class="adminItem__btns" style="margin-top:10px;">
-          <button class="btn btn--ghost delBtn" style="padding:8px 12px; font-size:10px;">DELETE</button>
+        
+        <div class="adminItem__btns" style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
+          
+          <button class="btn btn--ghost toggleStatusBtn" style="padding:8px 12px; font-size:10px;">
+            ${isInactive ? 'SHOW (Set Active)' : 'HIDE (Set Inactive)'}
+          </button>
+
+          <button class="btn btn--ghost toggleSoldBtn" style="padding:8px 12px; font-size:10px;">
+            ${isSoldOut ? 'Mark Available' : 'Mark Sold Out'}
+          </button>
+
+          <button class="btn btn--ghost delBtn" style="padding:8px 12px; font-size:10px; border-color:#552222; color:#faa;">DELETE</button>
         </div>
       `;
 
+      // 1. DELETE
       div.querySelector('.delBtn').addEventListener('click', async () => {
-        if(confirm(`Delete "${p.name}"?`)) {
+        if(confirm(`Delete "${p.name}"? This cannot be undone.`)) {
           await sb.from('products').delete().eq('id', p.id);
           loadAdminProducts();
         }
       });
 
-      productsList.appendChild(div);
+      // 2. TOGGLE STATUS (Hide/Show)
+      div.querySelector('.toggleStatusBtn').addEventListener('click', async () => {
+        const newStatus = isInactive ? 'active' : 'inactive';
+        // Optimistic update UI? Better to reload to be sure.
+        await sb.from('products').update({ status: newStatus }).eq('id', p.id);
+        loadAdminProducts();
+      });
+
+      // 3. TOGGLE SOLD OUT
+      div.querySelector('.toggleSoldBtn').addEventListener('click', async () => {
+        await sb.from('products').update({ sold_out: !isSoldOut }).eq('id', p.id);
+        loadAdminProducts();
+      });
+
+      productsContainer.appendChild(div);
     });
   }
 }
