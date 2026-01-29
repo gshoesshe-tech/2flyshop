@@ -224,7 +224,6 @@ async function initShop() {
   const pName = $('#pName');
   const pPrice = $('#pPrice');
   const pCategory = $('#pCategory');
-  const pSku = $('#pSku');
   const pCode = $('#pCode');
   const pQty = $('#pQty');
   const pMinus = $('#pMinus');
@@ -703,4 +702,5 @@ async function initAdmin() {
     });
   }
 }
+
 
