@@ -1,21 +1,16 @@
-/* 2FLY Wholesale System (Fixed)
-   - Handles Landing, Shop, and Admin logic
-   - Requires Supabase setup in config.js
-*/
-
+/* 2FLY Wholesale System - Updated for New Category Filter */
 const SUPABASE_URL = (window.__SUPABASE_URL__ || '').trim();
 const SUPABASE_ANON_KEY = (window.__SUPABASE_ANON_KEY__ || '').trim();
 
 let __sb = null;
 
 // --- Helper Functions ---
-
 function money(val) {
   return '₱' + (Number(val) || 0).toLocaleString('en-US');
 }
 
 function hasSupabase() {
-  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase && typeof window.supabase.createClient === 'function');
+  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
 }
 
 function getSupabase() {
@@ -26,86 +21,15 @@ function getSupabase() {
 
 function clampInt(v, min = 1) {
   const n = parseInt(v, 10);
-  if (!Number.isFinite(n) || isNaN(n)) return min;
-  return Math.max(min, n);
+  return (Number.isFinite(n) && !isNaN(n)) ? Math.max(min, n) : min;
 }
 
-// Shortcut selectors
 const $ = (sel, p = document) => p.querySelector(sel);
 const $$ = (sel, p = document) => p.querySelectorAll(sel);
 
 
-// ---------------- LANDING (index.html) ----------------
-function initLanding() {
-  const enterBtn = $("#enterBtn");
-  const fade = $("#enterFade");
-  const video = $("#landingVideo");
-  const soundBtn = $("#soundBtn");
-
-  // Handle Enter
-  enterBtn?.addEventListener("click", () => {
-    fade.classList.add("is-on");
-    setTimeout(() => {
-      window.location.href = "./shop.html";
-    }, 450);
-  });
-
-  // Handle Sound Toggle
-  soundBtn?.addEventListener("click", () => {
-    if(!video) return;
-    video.muted = !video.muted;
-    soundBtn.style.opacity = video.muted ? "0.6" : "1";
-  });
-}
-
-
-// ---------------- SHOP (shop.html) ----------------
-const cart = {
-  items: [],
-};
-
-function loadCart() {
-  try {
-    cart.items = JSON.parse(localStorage.getItem("cart_v1") || "[]") || [];
-  } catch {
-    cart.items = [];
-  }
-}
-
-function saveCart() {
-  localStorage.setItem("cart_v1", JSON.stringify(cart.items));
-}
-
-function cartTotalQty() {
-  return cart.items.reduce((a, it) => a + (Number(it.qty) || 0), 0);
-}
-
-function cartSubtotal() {
-  return cart.items.reduce((a, it) => a + (Number(it.price) || 0) * (Number(it.qty) || 0), 0);
-}
-
-function findCartItem(id) {
-  return cart.items.find(x => String(x.id) === String(id));
-}
-
-function addToCart(prod, qty) {
-  const q = clampInt(qty, 1);
-  const existing = findCartItem(prod.id);
-  if (existing) existing.qty = clampInt((existing.qty || 0) + q, 1);
-  else {
-    cart.items.push({
-      id: prod.id,
-      name: prod.name,
-      price: Number(prod.price) || 0,
-      code: prod.code || "",
-      sku: prod.sku || "",
-      category: prod.category || "",
-      image: (prod.images && prod.images[0]) || prod.image_url || "",
-      qty: q
-    });
-  }
-  saveCart();
-}
+// ---------------- SHOP LOGIC ----------------
+let allProducts = []; // Store fetched products here
 
 function initShop() {
   loadCart();
@@ -113,25 +37,31 @@ function initShop() {
 
   const sb = getSupabase();
   const grid = $("#productsGrid");
+  const loading = $("#loadingState");
   const empty = $("#emptyState");
+  
+  // NEW: Select buttons by .cat-btn instead of .pill
+  const catBtns = $$(".cat-btn");
+  let activeFilter = "ALL"; // Default to ALL
 
-  // --- CHANGED: Dropdown Logic instead of Pills ---
-  const categorySelect = $("#categorySelect");
-  let activeFilter = "ALL";
-
-  if (categorySelect) {
-    categorySelect.addEventListener("change", (e) => {
-      activeFilter = e.target.value;
-      renderProducts(currentProducts, activeFilter);
+  // 1. Setup Filter Click Events
+  catBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      // Remove active class from all
+      catBtns.forEach(b => b.classList.remove("is-active"));
+      // Add to clicked
+      btn.classList.add("is-active");
+      
+      // Get filter value
+      activeFilter = btn.getAttribute("data-filter");
+      renderProducts();
     });
-  }
+  });
 
-  let currentProducts = [];
-
+  // 2. Fetch Data
   async function fetchProducts() {
     if (!sb) {
-      empty.textContent = "Supabase not connected. Check config.js.";
-      empty.hidden = false;
+      if(loading) loading.textContent = "Supabase Config Error";
       return;
     }
 
@@ -141,86 +71,106 @@ function initShop() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      empty.hidden = false;
-      empty.textContent = "Error loading products.";
+      console.error(error);
+      if(loading) loading.textContent = "Error loading products.";
       return;
     }
 
-    currentProducts = (data || [])
+    // Filter out inactive items
+    allProducts = (data || [])
       .filter(p => (p.status || "active") === "active")
-      .filter(p => p.sold_out !== true);
+      .filter(p => p.sold_out !== true); // Hide sold out if desired, or keep them
 
-    renderProducts(currentProducts, activeFilter);
+    if(loading) loading.style.display = 'none';
+    
+    // Initial Render
+    renderProducts();
   }
 
-  function renderProducts(list, filter) {
-    // If filter is "ALL", show everything. Otherwise match category.
-    const filtered = (filter === "ALL" || !filter)
+  // 3. Render
+  function renderProducts() {
+    const list = allProducts;
+    
+    // Filter logic
+    const filtered = (activeFilter === "ALL")
       ? list
-      : list.filter(p => String(p.category || "").toLowerCase() === String(filter).toLowerCase());
+      : list.filter(p => String(p.category || "").toLowerCase() === activeFilter.toLowerCase());
 
     grid.innerHTML = "";
-    empty.hidden = filtered.length !== 0;
-
-    filtered.forEach(prod => {
-      const img = (prod.images && prod.images[0]) || prod.image_url || "";
-      const card = document.createElement("div");
-      card.className = "card";
-      card.innerHTML = `
-        <img class="card__img" src="${escapeHtmlAttr(img)}" alt="${escapeHtmlAttr(prod.name || "")}" onerror="this.style.opacity=.2" />
-        <div class="card__body">
-          <div class="card__name">${escapeHtml(prod.name || "")}</div>
-          <div class="card__price">${money(prod.price)}</div>
-        </div>
-      `;
-      card.addEventListener("click", () => openProductModal(prod));
-      grid.appendChild(card);
-    });
+    
+    if (filtered.length === 0) {
+      if(empty) empty.hidden = false;
+    } else {
+      if(empty) empty.hidden = true;
+      
+      filtered.forEach(prod => {
+        // Handle image
+        const img = (prod.images && prod.images[0]) || prod.image_url || "";
+        
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <img class="card__img" src="${escapeHtmlAttr(img)}" alt="${escapeHtmlAttr(prod.name)}" loading="lazy" onerror="this.style.opacity=0.3" />
+          <div class="card__body">
+            <div class="card__name">${escapeHtml(prod.name)}</div>
+            <div class="card__price">${money(prod.price)}</div>
+          </div>
+        `;
+        card.addEventListener("click", () => openProductModal(prod));
+        grid.appendChild(card);
+      });
+    }
   }
 
+  // --- Modal Logic ---
   const modal = $("#productModal");
   const modalCloseEls = $$("[data-close='1']", modal);
+  
+  // Elements inside modal
   const pMain = $("#pMainImg");
   const pThumbs = $("#pThumbs");
   const pName = $("#pName");
   const pPrice = $("#pPrice");
   const pCategory = $("#pCategory");
-  const pSku = $("#pSku");
   const pCode = $("#pCode");
-  const pMinus = $("#pMinus");
-  const pPlus = $("#pPlus");
   const pQty = $("#pQty");
   const pAddBtn = $("#pAddBtn");
+  const pMinus = $("#pMinus");
+  const pPlus = $("#pPlus");
 
   let currentProd = null;
 
   function openProductModal(prod) {
-    currentProd = normalizeProduct(prod);
-    const imgs = currentProd.images.length ? currentProd.images : [currentProd.image_url].filter(Boolean);
-    pMain.src = imgs[0] || "";
-    pMain.alt = currentProd.name;
+    currentProd = prod;
+    
+    const imgs = (prod.images && prod.images.length) ? prod.images : [prod.image_url].filter(Boolean);
+    const mainSrc = imgs[0] || "";
 
-    pThumbs.innerHTML = "";
-    imgs.forEach((u) => {
-      const b = document.createElement("button");
-      b.className = "thumb";
-      b.type = "button";
-      b.innerHTML = `<img src="${escapeHtmlAttr(u)}" alt="" />`;
-      b.addEventListener("click", () => { pMain.src = u; });
-      pThumbs.appendChild(b);
-    });
+    if(pMain) pMain.src = mainSrc;
+    
+    if(pThumbs) {
+      pThumbs.innerHTML = "";
+      if (imgs.length > 1) {
+        imgs.forEach(src => {
+          const t = document.createElement("button");
+          t.className = "thumb";
+          t.innerHTML = `<img src="${src}" />`;
+          t.onclick = () => { if(pMain) pMain.src = src; };
+          pThumbs.appendChild(t);
+        });
+      }
+    }
 
-    pName.textContent = currentProd.name;
-    pPrice.textContent = money(currentProd.price);
-    pCategory.textContent = currentProd.category || "";
-    pSku.textContent = currentProd.sku || "";
-    pCode.textContent = currentProd.code || "";
-    pQty.value = "1";
-    syncAddBtn();
-
+    if(pName) pName.textContent = prod.name;
+    if(pPrice) pPrice.textContent = money(prod.price);
+    if(pCategory) pCategory.textContent = prod.category || "";
+    if(pCode) pCode.textContent = prod.code || "";
+    
+    if(pQty) pQty.value = "1";
+    
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow = "hidden"; // Prevent background scroll
   }
 
   function closeProductModal() {
@@ -231,318 +181,231 @@ function initShop() {
   }
 
   modalCloseEls.forEach(el => el.addEventListener("click", closeProductModal));
-  function syncAddBtn() {
-    const q = clampInt(pQty.value, 1);
-    pAddBtn.textContent = `ADD ${q} TO CART`;
-  }
 
-  pQty.addEventListener("input", () => {
-    if (!pQty.value) return syncAddBtn();
-    const q = clampInt(pQty.value, 1);
-    pQty.value = String(q);
-    syncAddBtn();
-  });
+  // Qty Logic
+  if(pMinus) pMinus.onclick = () => {
+    const v = clampInt(pQty.value, 1);
+    pQty.value = Math.max(1, v - 1);
+  };
+  if(pPlus) pPlus.onclick = () => {
+    const v = clampInt(pQty.value, 1);
+    pQty.value = v + 1;
+  };
 
-  pMinus.addEventListener("click", () => {
-    const q = clampInt(pQty.value, 1);
-    pQty.value = String(Math.max(1, q - 1));
-    syncAddBtn();
-  });
-
-  pPlus.addEventListener("click", () => {
-    const q = clampInt(pQty.value, 1);
-    pQty.value = String(q + 1);
-    syncAddBtn();
-  });
-
-  pAddBtn.addEventListener("click", () => {
-    if (!currentProd) return;
+  // Add to Cart
+  if(pAddBtn) pAddBtn.onclick = () => {
+    if(!currentProd) return;
     const q = clampInt(pQty.value, 1);
     addToCart(currentProd, q);
-    updateCartUI();
     closeProductModal();
     window.openCart();
-  });
+  };
 
   fetchProducts();
+}
+
+
+// ---------------- CART SYSTEM ----------------
+const cart = { items: [] };
+
+function loadCart() {
+  try { cart.items = JSON.parse(localStorage.getItem("cart_v2") || "[]"); } 
+  catch { cart.items = []; }
+}
+function saveCart() {
+  localStorage.setItem("cart_v2", JSON.stringify(cart.items));
   updateCartUI();
 }
 
-function normalizeProduct(p) {
-  return {
-    id: p.id,
-    name: p.name || "",
-    price: Number(p.price) || 0,
-    code: p.code || "",
-    sku: p.sku || "",
-    category: p.category || "General",
-    image_url: p.image_url || "",
-    images: Array.isArray(p.images) ? p.images.filter(Boolean) : []
-  };
-}
-
-function escapeHtml(s) {
-  return String(s).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
-}
-function escapeHtmlAttr(s) {
-  return escapeHtml(s || "");
-}
-
-
-// ---------------- CART UI + CHECKOUT ----------------
-function wireCartUI() {
-  const cartBtn = $("#cartBtn");
-  const overlay = $("#cartOverlay");
-  const drawer = $("#cartDrawer");
-  const closeBtn = $("#closeCartBtn");
-
-  function openCart() {
-    if(!overlay || !drawer) return;
-    overlay.hidden = false;
-    drawer.classList.add("is-open");
-    updateCartUI();
-  }
-  function closeCart() {
-    if(!overlay || !drawer) return;
-    overlay.hidden = true;
-    drawer.classList.remove("is-open");
-  }
-
-  cartBtn?.addEventListener("click", openCart);
-  overlay?.addEventListener("click", closeCart);
-  closeBtn?.addEventListener("click", closeCart);
-  window.openCart = openCart;
-  window.closeCart = closeCart;
-
-  const checkoutBtn = $("#checkoutBtn");
-  const checkoutModal = $("#checkoutModal");
-  const checkoutCloseEls = $$("[data-close-checkout='1']", checkoutModal);
-  const copyBtn = $("#copyOrderBtn");
-
-  checkoutBtn?.addEventListener("click", () => {
-    if (!cart.items.length) return;
-    refreshOrderText();
-    closeCart();
-    checkoutModal.classList.add("is-open");
-  });
-
-  checkoutCloseEls.forEach(el => el.addEventListener("click", () => checkoutModal.classList.remove("is-open")));
-
-  copyBtn?.addEventListener("click", async () => {
-    const t = $("#orderText")?.value || "";
-    try {
-      await navigator.clipboard.writeText(t);
-      const oldText = copyBtn.textContent;
-      copyBtn.textContent = "COPIED ✅";
-      setTimeout(() => (copyBtn.textContent = oldText), 1500);
-    } catch {
-      const ta = $("#orderText");
-      ta?.select();
-      document.execCommand("copy");
-    }
-  });
-
-  ["#cName", "#cPhone", "#cAddress", "#cNotes"].forEach(sel => {
-    $(sel)?.addEventListener("input", refreshOrderText);
-  });
-
-  // --- UPDATED: Grouped by Category + Subtotals ---
-  function refreshOrderText() {
-    const name = ($("#cName")?.value || "").trim();
-    const phone = ($("#cPhone")?.value || "").trim();
-    const address = ($("#cAddress")?.value || "").trim();
-    const notes = ($("#cNotes")?.value || "").trim();
-
-    const lines = [];
-    lines.push("🛒 ORDER FORM – 2FLY.GALLERIA");
-    lines.push(`Name: ${name}`);
-    lines.push(`Phone: ${phone}`);
-    lines.push(`Address: ${address}`);
-    if (notes) lines.push(`Notes: ${notes}`);
-    lines.push("");
-
-    // 1. Group items by Category
-    const grouped = {};
-    cart.items.forEach(it => {
-      // Use the item category or default to 'General'
-      const cat = (it.category || "General").toUpperCase();
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push(it);
+function addToCart(prod, qty) {
+  const existing = cart.items.find(x => x.id === prod.id);
+  if(existing) {
+    existing.qty += qty;
+  } else {
+    cart.items.push({
+      id: prod.id,
+      name: prod.name,
+      price: prod.price,
+      image: (prod.images && prod.images[0]) || prod.image_url,
+      code: prod.code,
+      sku: prod.sku,
+      qty: qty
     });
-
-    // 2. Build segments per Category
-    for (const category in grouped) {
-      let catQty = 0;
-      let catSubtotalValue = 0;
-
-      lines.push(`[ ${category} ]`);
-      lines.push("");
-
-      grouped[category].forEach(it => {
-        const qty = Number(it.qty) || 0;
-        const price = Number(it.price) || 0;
-        // Prioritize Code/SKU to save space
-        const identifier = (it.code || it.sku || "N/A").trim();
-        
-        lines.push(`${identifier} x${qty}`);
-        
-        catQty += qty;
-        catSubtotalValue += (price * qty);
-      });
-
-      lines.push("");
-      lines.push(`Total Quantity: ${catQty}`);
-      lines.push(`Subtotal: ${money(catSubtotalValue)}`);
-      lines.push("--------------------------");
-      lines.push("");
-    }
-
-    // Grand Totals at bottom
-    lines.push(`GRAND TOTAL QTY: ${cartTotalQty()}`);
-    lines.push(`GRAND TOTAL AMT: ${money(cartSubtotal())}`);
-
-    const out = lines.join("\n");
-    const ta = $("#orderText");
-    if (ta) ta.value = out;
   }
+  saveCart();
 }
 
 function updateCartUI() {
-  const count = $("#cartCount");
+  const countBadge = $("#cartCount");
   const itemsWrap = $("#cartItems");
-  const subtotalEl = $("#cartSubtotal");
-  const totalQtyEl = $("#cartTotalQty");
+  const subTotalEl = $("#cartSubtotal");
+  const qtyTotalEl = $("#cartTotalQty");
 
-  if (count) count.textContent = String(cartTotalQty());
-  if (subtotalEl) subtotalEl.textContent = money(cartSubtotal());
-  if (totalQtyEl) totalQtyEl.textContent = String(cartTotalQty());
+  let totalP = 0; 
+  let totalQ = 0;
 
-  if (!itemsWrap) return;
-  itemsWrap.innerHTML = "";
-  if (!cart.items.length) {
-    itemsWrap.innerHTML = '<div style="color:rgba(255,255,255,.55);padding:14px 0;">Your cart is empty.</div>';
-    return;
-  }
-
-  cart.items.forEach(it => {
-    const row = document.createElement("div");
-    row.className = "cartItem";
-    row.innerHTML = `
-      <img class="cartItem__img" src="${escapeHtmlAttr(it.image || "")}" alt="" onerror="this.style.opacity=.2" />
-      <div>
-        <div class="cartItem__name">${escapeHtml(it.name || "")}</div>
-        <div class="cartItem__meta">${it.code ? `Code: ${escapeHtml(it.code)}` : ""}</div>
-        <div class="cartItem__row">
-          <div class="cartQty">
-            <button type="button" data-dec="${it.id}">−</button>
-            <input type="number" min="1" step="1" value="${Number(it.qty) || 1}" data-qty="${it.id}" />
-            <button type="button" data-inc="${it.id}">+</button>
-          </div>
-          <div style="color:rgba(255,255,255,.75);font-weight:700;">${money((Number(it.price)||0) * (Number(it.qty)||0))}</div>
-        </div>
-      </div>
-      <button class="trashBtn" type="button" data-del="${it.id}">🗑</button>
-    `;
-    itemsWrap.appendChild(row);
+  cart.items.forEach(item => {
+    totalP += (item.price * item.qty);
+    totalQ += item.qty;
   });
 
-  // UI Events
-  itemsWrap.querySelectorAll("[data-dec]").forEach(btn => btn.addEventListener("click", () => {
-    const item = findCartItem(btn.dataset.dec);
-    if (item) { item.qty = Math.max(1, item.qty - 1); saveCart(); updateCartUI(); }
-  }));
-  itemsWrap.querySelectorAll("[data-inc]").forEach(btn => btn.addEventListener("click", () => {
-    const item = findCartItem(btn.dataset.inc);
-    if (item) { item.qty += 1; saveCart(); updateCartUI(); }
-  }));
-  itemsWrap.querySelectorAll("[data-qty]").forEach(inp => inp.addEventListener("input", () => {
-    const item = findCartItem(inp.dataset.qty);
-    if (item) { item.qty = clampInt(inp.value, 1); saveCart(); updateCartUI(); }
-  }));
-  itemsWrap.querySelectorAll("[data-del]").forEach(btn => btn.addEventListener("click", () => {
-    cart.items = cart.items.filter(x => String(x.id) !== String(btn.dataset.del));
-    saveCart(); updateCartUI();
-  }));
+  if(countBadge) countBadge.textContent = totalQ;
+  if(subTotalEl) subTotalEl.textContent = money(totalP);
+  if(qtyTotalEl) qtyTotalEl.textContent = totalQ;
+
+  // Render Items in Drawer
+  if(itemsWrap) {
+    itemsWrap.innerHTML = "";
+    if(cart.items.length === 0) {
+      itemsWrap.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Cart is empty</div>`;
+      return;
+    }
+
+    cart.items.forEach(item => {
+      const el = document.createElement("div");
+      el.className = "cartItem";
+      el.innerHTML = `
+        <img class="cartItem__img" src="${escapeHtmlAttr(item.image)}" />
+        <div>
+          <div class="cartItem__name">${escapeHtml(item.name)}</div>
+          <div class="cartItem__meta">${item.code || ''}</div>
+          <div class="cartQty">
+            <button class="cDec" data-id="${item.id}">-</button>
+            <input readonly value="${item.qty}" />
+            <button class="cInc" data-id="${item.id}">+</button>
+            <div style="margin-left:auto; font-weight:700; font-size:13px;">
+              ${money(item.price * item.qty)}
+            </div>
+            <button class="cDel" data-id="${item.id}" style="background:none; color:#666; margin-left:10px;">×</button>
+          </div>
+        </div>
+      `;
+      itemsWrap.appendChild(el);
+    });
+
+    // Event Delegation for Cart Buttons
+    itemsWrap.querySelectorAll('.cInc').forEach(b => b.onclick = () => modQty(b.dataset.id, 1));
+    itemsWrap.querySelectorAll('.cDec').forEach(b => b.onclick = () => modQty(b.dataset.id, -1));
+    itemsWrap.querySelectorAll('.cDel').forEach(b => b.onclick = () => rmItem(b.dataset.id));
+  }
 }
 
+function modQty(id, change) {
+  const item = cart.items.find(x => String(x.id) === String(id));
+  if(!item) return;
+  item.qty += change;
+  if(item.qty < 1) item.qty = 1;
+  saveCart();
+}
+function rmItem(id) {
+  cart.items = cart.items.filter(x => String(x.id) !== String(id));
+  saveCart();
+}
 
-// ---------------- ADMIN (admin.html) ----------------
-function initAdmin() {
-  const sb = getSupabase();
-  const msgEl = document.getElementById('adminMsg');
+function wireCartUI() {
+  const btn = $("#cartBtn");
+  const close = $("#closeCartBtn");
+  const overlay = $("#cartOverlay");
+  const drawer = $("#cartDrawer");
 
-  const setMsg = (text, isErr = false) => {
-    if (!msgEl) return;
-    msgEl.textContent = text || '';
-    msgEl.style.color = isErr ? 'rgba(255,90,90,.95)' : 'rgba(255,255,255,.70)';
+  window.openCart = () => {
+    if(drawer) drawer.classList.add("is-open");
+    if(overlay) overlay.hidden = false;
+  };
+  const closeC = () => {
+    if(drawer) drawer.classList.remove("is-open");
+    if(overlay) overlay.hidden = true;
   };
 
-  if (!sb) { setMsg('Supabase not configured', true); return; }
+  if(btn) btn.onclick = window.openCart;
+  if(close) close.onclick = closeC;
+  if(overlay) overlay.onclick = closeC;
 
-  const aName = $("#aName"), aPrice = $("#aPrice"), aCode = $("#aCode"), aSku = $("#aSku"), aCategory = $("#aCategory"), aStatus = $("#aStatus"), aSoldOut = $("#aSoldOut"), aImageUrl = $("#aImageUrl"), addUrlBtn = $("#addUrlBtn"), aFiles = $("#aFiles"), uploadFilesBtn = $("#uploadFilesBtn"), imgList = $("#imgList"), createProductBtn = $("#createProductBtn"), adminProducts = $("#adminProducts");
+  // Checkout Logic
+  const coBtn = $("#checkoutBtn");
+  const coModal = $("#checkoutModal");
+  const coClose = $$("[data-close-checkout='1']");
+  
+  if(coBtn) coBtn.onclick = () => {
+    if(cart.items.length === 0) return alert("Cart is empty");
+    closeC(); // Close drawer
+    updateOrderForm();
+    if(coModal) {
+      coModal.classList.add("is-open");
+      coModal.setAttribute("aria-hidden", "false");
+    }
+  };
 
-  let stagedImages = [];
-
-  function renderStaged() {
-    if (!imgList) return;
-    imgList.innerHTML = stagedImages.map((url, idx) => `
-      <div class="imgChip">
-        <img src="${escapeHtmlAttr(url)}" />
-        <div class="imgChip__row"><button class="imgChip__btn" type="button" data-rm="${idx}">Remove</button></div>
-      </div>
-    `).join('');
-    imgList.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { stagedImages.splice(b.dataset.rm, 1); renderStaged(); }));
-  }
-
-  addUrlBtn?.addEventListener('click', () => {
-    const u = aImageUrl.value.trim();
-    if (u) { stagedImages.push(u); aImageUrl.value = ''; renderStaged(); }
+  coClose.forEach(b => b.onclick = () => {
+    if(coModal) {
+      coModal.classList.remove("is-open");
+      coModal.setAttribute("aria-hidden", "true");
+    }
+  });
+  
+  // Inputs listener to update order text
+  ["#cName", "#cPhone", "#cAddress", "#cNotes"].forEach(s => {
+    const el = $(s);
+    if(el) el.oninput = updateOrderForm;
   });
 
-  uploadFilesBtn?.addEventListener('click', async () => {
-    const files = Array.from(aFiles?.files || []);
-    if (!files.length) return;
-    uploadFilesBtn.disabled = true; setMsg('Uploading...');
-    try {
-      for (const f of files) {
-        const path = `public/${Date.now()}_${f.name.replace(/[^a-z0-9.]/gi, '_')}`;
-        await sb.storage.from('product_images').upload(path, f);
-        stagedImages.push(sb.storage.from('product_images').getPublicUrl(path).data.publicUrl);
-      }
-      aFiles.value = ''; renderStaged(); setMsg('Uploaded ✅');
-    } catch (e) { setMsg('Upload failed', true); }
-    finally { uploadFilesBtn.disabled = false; }
-  });
-
-  async function loadAdminProducts() {
-    if (!adminProducts) return;
-    const { data } = await sb.from('products').select('*').order('created_at', { ascending: false });
-    adminProducts.innerHTML = (data || []).map(p => `
-      <div class="adminItem">
-        <div class="adminItem__top">
-          <div><div class="adminItem__name">${escapeHtml(p.name)}</div></div>
-          <button class="btn btn--ghost" data-del="${p.id}">Delete</button>
-        </div>
-      </div>`).join('');
-    adminProducts.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
-      if(confirm("Delete?")) { await sb.from('products').delete().eq('id', b.dataset.del); loadAdminProducts(); }
-    }));
-  }
-
-  createProductBtn?.addEventListener('click', async () => {
-    const payload = { name: aName.value.trim(), price: Number(aPrice.value), code: aCode.value.trim(), sku: aSku.value.trim(), category: aCategory.value, status: aStatus.value, sold_out: aSoldOut.checked, images: stagedImages };
-    if (!payload.name) return setMsg('Name required', true);
-    await sb.from('products').insert(payload);
-    setMsg('Created ✅'); loadAdminProducts();
-  });
-
-  loadAdminProducts();
+  // Copy
+  const cpBtn = $("#copyOrderBtn");
+  if(cpBtn) cpBtn.onclick = () => {
+    const txt = $("#orderText");
+    if(txt) {
+      txt.select();
+      document.execCommand("copy");
+      const old = cpBtn.textContent;
+      cpBtn.textContent = "COPIED! ✅";
+      setTimeout(()=>cpBtn.textContent=old, 1500);
+    }
+  };
 }
 
+function updateOrderForm() {
+  const name = $("#cName")?.value || "";
+  const phone = $("#cPhone")?.value || "";
+  const addr = $("#cAddress")?.value || "";
+  const notes = $("#cNotes")?.value || "";
+
+  let total = 0;
+  const itemsTxt = cart.items.map(i => {
+    total += i.price * i.qty;
+    return `• ${i.qty}x ${i.name} (${i.code||'-'})`;
+  }).join("\n");
+
+  const full = `🛒 ORDER FORM - 2FLY!GALLERIA
+---------------------------
+Name: ${name}
+Phone: ${phone}
+Address: ${addr}
+Notes: ${notes}
+
+ORDER DETAILS:
+${itemsTxt}
+
+TOTAL: ${money(total)}
+`;
+  const box = $("#orderText");
+  if(box) box.value = full;
+}
+
+
+// ---------------- UTILS ----------------
+function escapeHtml(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function escapeHtmlAttr(s) {
+  return escapeHtml(s);
+}
+
+// ---------------- BOOTSTRAP ----------------
 function bootstrap() {
-  const p = document.body?.dataset?.page;
-  if (p === 'landing') initLanding();
-  if (p === 'shop') initShop();
-  if (p === 'admin') initAdmin();
+  const p = document.body.dataset.page;
+  if(p === 'shop') initShop();
+  else if(p === 'landing' && typeof initLanding === 'function') initLanding(); 
+  // Admin logic stays in previous admin file or can be merged here
 }
-document.addEventListener('DOMContentLoaded', bootstrap);
+
+document.addEventListener("DOMContentLoaded", bootstrap);
