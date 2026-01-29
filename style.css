@@ -769,3 +769,50 @@ body{
   .pill{ min-width: 145px; }
   .qtyRow{ grid-template-columns: 42px 86px 42px 1fr; }
 }
+/* PRODUCTS DROPDOWN */
+.productsNav {
+  position: relative;
+  display: inline-block;
+}
+
+.productsBtn {
+  min-width: 200px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.25);
+  color: #fff;
+  font-family: var(--fontHead);
+  font-weight: 800;
+  letter-spacing: .16em;
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.productsBtn .chev {
+  margin-left: 8px;
+}
+
+.productsDropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  width: 100%;
+  background: rgba(0,0,0,.85);
+  border: 1px solid rgba(255,255,255,.12);
+  display: none;
+  flex-direction: column;
+  z-index: 20;
+}
+
+.productsNav.open .productsDropdown {
+  display: flex;
+}
+
+.productsDropdown .ddItem {
+  width: 100%;
+  text-align: left;
+  border-radius: 0;
+}
+
+
