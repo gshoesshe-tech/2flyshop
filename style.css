@@ -164,7 +164,7 @@ body{
 .hero{
   position:relative;
   min-height:520px;
-  /* CHANGED: Overflow visible so dropdowns don't get cut off */
+  /* FIX: Overflow visible so dropdowns don't get cut off */
   overflow:visible; 
   border-bottom:1px solid rgba(255,255,255,.06);
 }
@@ -202,6 +202,11 @@ body{
   font-size:12px;
   text-transform:uppercase;
   cursor:pointer;
+  /* FIX: Center text */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 .pill:hover{ border-color:rgba(255,255,255,.22); }
 .pill.is-active{
@@ -215,7 +220,8 @@ body{
   display:grid;
   grid-template-columns: repeat(3, 1fr);
   gap:40px;
-  align-items:end;
+  /* FIX: Align to top to prevent jagged edges */
+  align-items:start;
   text-align:center;
 }
 .statBig{
@@ -284,6 +290,10 @@ body{
   overflow:hidden;
   cursor:pointer;
   transition: transform .15s ease, border-color .15s ease;
+  /* FIX: Flex container to align footer to bottom */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 .card:hover{ transform: translateY(-2px); border-color:rgba(255,255,255,.20); }
 .card__img{
@@ -297,16 +307,22 @@ body{
   display:flex;
   flex-direction:column;
   gap:8px;
+  /* FIX: Grow to fill space */
+  flex: 1;
 }
 .card__name{
   font-family:var(--fontHead);
   font-weight:800;
   letter-spacing:.04em;
   font-size:14px;
+  /* FIX: Push price down */
+  margin-bottom: auto;
 }
 .card__price{
   color:rgba(255,255,255,.70);
   font-weight:600;
+  /* Optional separation */
+  margin-top: 10px;
 }
 
 /* ---------------- Modal ---------------- */
@@ -435,10 +451,12 @@ body{
   font-size:12px;
   text-transform:uppercase;
   text-decoration:none;
+  /* FIX: Center content */
   display:inline-flex;
   align-items:center;
   justify-content:center;
   gap:10px;
+  text-align: center;
 }
 .btn--wide{ width:100%; }
 .btn--outline{
@@ -770,6 +788,7 @@ body{
   .pill{ min-width: 145px; }
   .qtyRow{ grid-template-columns: 42px 86px 42px 1fr; }
 }
+
 /* PRODUCTS DROPDOWN */
 .productsNav {
   position: relative;
@@ -788,6 +807,11 @@ body{
   font-size: 12px;
   text-transform: uppercase;
   cursor: pointer;
+  /* FIX: Ensure centered */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .productsBtn .chev {
