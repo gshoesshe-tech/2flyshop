@@ -10,7 +10,6 @@ let __sb = null;
 
 // --- Helper Functions ---
 
-// 1. FIX: Added the missing money formatting function
 function money(val) {
   return '₱' + (Number(val) || 0).toLocaleString('en-US');
 }
@@ -112,7 +111,7 @@ function initShop() {
   loadCart();
   wireCartUI();
 
-  // ✅ PASTE IT HERE (dropdown open/close only)
+  // Dropdown Logic
   const productsToggle = document.getElementById("productsToggle");
   const productsNav = document.querySelector(".productsNav");
 
@@ -126,20 +125,16 @@ function initShop() {
     });
   });
 
-  // then continue your existing code…
-  const sb = getSupabase();
-  const grid = $("#productsGrid");
-  const empty = $("#emptyState");
-  // ...
-}
-
+  // --- FIXED: All Shop logic is now INSIDE initShop ---
   const sb = getSupabase();
   const grid = $("#productsGrid");
   const empty = $("#emptyState");
 
   const pills = $$(".pill");
   let activeFilter = "Earrings";
+  let currentProducts = [];
 
+  // Filter Pills
   pills.forEach(p => {
     p.addEventListener("click", () => {
       pills.forEach(x => x.classList.remove("is-active"));
@@ -149,12 +144,12 @@ function initShop() {
     });
   });
 
-  let currentProducts = [];
-
   async function fetchProducts() {
     if (!sb) {
-      empty.textContent = "Supabase not connected. Check config.js.";
-      empty.hidden = false;
+      if(empty) {
+          empty.textContent = "Supabase not connected. Check config.js.";
+          empty.hidden = false;
+      }
       return;
     }
 
@@ -164,8 +159,10 @@ function initShop() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      empty.hidden = false;
-      empty.textContent = "Error loading products.";
+      if(empty) {
+          empty.hidden = false;
+          empty.textContent = "Error loading products.";
+      }
       return;
     }
 
@@ -177,12 +174,14 @@ function initShop() {
   }
 
   function renderProducts(list, filter) {
+    if(!grid) return; // Guard clause
+
     const filtered = (filter === "ALL")
       ? list
       : list.filter(p => String(p.category || "Earrings").toLowerCase() === String(filter).toLowerCase());
 
     grid.innerHTML = "";
-    empty.hidden = filtered.length !== 0;
+    if(empty) empty.hidden = filtered.length !== 0;
 
     filtered.forEach(prod => {
       const img = (prod.images && prod.images[0]) || prod.image_url || "";
@@ -200,6 +199,7 @@ function initShop() {
     });
   }
 
+  // Modal Elements
   const modal = $("#productModal");
   const modalCloseEls = $$("[data-close='1']", modal);
   const pMain = $("#pMainImg");
@@ -219,66 +219,78 @@ function initShop() {
   function openProductModal(prod) {
     currentProd = normalizeProduct(prod);
     const imgs = currentProd.images.length ? currentProd.images : [currentProd.image_url].filter(Boolean);
-    pMain.src = imgs[0] || "";
-    pMain.alt = currentProd.name;
+    if(pMain) {
+        pMain.src = imgs[0] || "";
+        pMain.alt = currentProd.name;
+    }
 
-    pThumbs.innerHTML = "";
-    imgs.forEach((u) => {
-      const b = document.createElement("button");
-      b.className = "thumb";
-      b.type = "button";
-      b.innerHTML = `<img src="${escapeHtmlAttr(u)}" alt="" />`;
-      b.addEventListener("click", () => { pMain.src = u; });
-      pThumbs.appendChild(b);
-    });
+    if(pThumbs) {
+        pThumbs.innerHTML = "";
+        imgs.forEach((u) => {
+        const b = document.createElement("button");
+        b.className = "thumb";
+        b.type = "button";
+        b.innerHTML = `<img src="${escapeHtmlAttr(u)}" alt="" />`;
+        b.addEventListener("click", () => { if(pMain) pMain.src = u; });
+        pThumbs.appendChild(b);
+        });
+    }
 
-    pName.textContent = currentProd.name;
-    pPrice.textContent = money(currentProd.price);
-    pCategory.textContent = currentProd.category || "";
-    pSku.textContent = currentProd.sku || "";
-    pCode.textContent = currentProd.code || "";
-    pQty.value = "1";
+    if(pName) pName.textContent = currentProd.name;
+    if(pPrice) pPrice.textContent = money(currentProd.price);
+    if(pCategory) pCategory.textContent = currentProd.category || "";
+    if(pSku) pSku.textContent = currentProd.sku || "";
+    if(pCode) pCode.textContent = currentProd.code || "";
+    if(pQty) pQty.value = "1";
     syncAddBtn();
 
-    modal.classList.add("is-open");
-    modal.setAttribute("aria-hidden", "false");
+    if(modal) {
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+    }
     document.body.style.overflow = "hidden";
   }
 
   function closeProductModal() {
-    modal.classList.remove("is-open");
-    modal.setAttribute("aria-hidden", "true");
+    if(modal) {
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+    }
     document.body.style.overflow = "";
     currentProd = null;
   }
 
   modalCloseEls.forEach(el => el.addEventListener("click", closeProductModal));
+  
   function syncAddBtn() {
+    if(!pQty || !pAddBtn) return;
     const q = clampInt(pQty.value, 1);
     pAddBtn.textContent = `ADD ${q} TO CART`;
   }
 
-  pQty.addEventListener("input", () => {
+  pQty?.addEventListener("input", () => {
     if (!pQty.value) return syncAddBtn();
     const q = clampInt(pQty.value, 1);
     pQty.value = String(q);
     syncAddBtn();
   });
 
-  pMinus.addEventListener("click", () => {
+  pMinus?.addEventListener("click", () => {
+    if(!pQty) return;
     const q = clampInt(pQty.value, 1);
     pQty.value = String(Math.max(1, q - 1));
     syncAddBtn();
   });
 
-  pPlus.addEventListener("click", () => {
+  pPlus?.addEventListener("click", () => {
+    if(!pQty) return;
     const q = clampInt(pQty.value, 1);
     pQty.value = String(q + 1);
     syncAddBtn();
   });
 
-  pAddBtn.addEventListener("click", () => {
-    if (!currentProd) return;
+  pAddBtn?.addEventListener("click", () => {
+    if (!currentProd || !pQty) return;
     const q = clampInt(pQty.value, 1);
     addToCart(currentProd, q);
     updateCartUI();
@@ -288,7 +300,8 @@ function initShop() {
 
   fetchProducts();
   updateCartUI();
-}
+} 
+// --- END OF initShop ---
 
 function normalizeProduct(p) {
   return {
@@ -402,7 +415,6 @@ function wireCartUI() {
       grouped[category].forEach(it => {
         const qty = Number(it.qty) || 0;
         const price = Number(it.price) || 0;
-        // Prioritize Code/SKU to save space
         const identifier = (it.code || it.sku || it.name || "N/A").trim();
         
         lines.push(`${identifier} x${qty}`);
@@ -418,7 +430,6 @@ function wireCartUI() {
       lines.push("");
     }
 
-    // Grand Totals at bottom
     lines.push(`GRAND TOTAL QTY: ${cartTotalQty()}`);
     lines.push(`GRAND TOTAL AMT: ${money(cartSubtotal())}`);
 
@@ -467,7 +478,6 @@ function updateCartUI() {
     itemsWrap.appendChild(row);
   });
 
-  // UI Events
   itemsWrap.querySelectorAll("[data-dec]").forEach(btn => btn.addEventListener("click", () => {
     const item = findCartItem(btn.dataset.dec);
     if (item) { item.qty = Math.max(1, item.qty - 1); saveCart(); updateCartUI(); }
@@ -567,4 +577,3 @@ function bootstrap() {
   if (p === 'admin') initAdmin();
 }
 document.addEventListener('DOMContentLoaded', bootstrap);
-
