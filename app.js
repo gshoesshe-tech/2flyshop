@@ -10,7 +10,6 @@ let __sb = null;
 
 // --- Helper Functions ---
 
-// 1. FIX: Added the missing money formatting function
 function money(val) {
   return '₱' + (Number(val) || 0).toLocaleString('en-US');
 }
@@ -116,17 +115,16 @@ function initShop() {
   const grid = $("#productsGrid");
   const empty = $("#emptyState");
 
-  const pills = $$(".pill");
-  let activeFilter = "Earrings";
+  // --- CHANGED: Dropdown Logic instead of Pills ---
+  const categorySelect = $("#categorySelect");
+  let activeFilter = "ALL";
 
-  pills.forEach(p => {
-    p.addEventListener("click", () => {
-      pills.forEach(x => x.classList.remove("is-active"));
-      p.classList.add("is-active");
-      activeFilter = p.dataset.filter;
+  if (categorySelect) {
+    categorySelect.addEventListener("change", (e) => {
+      activeFilter = e.target.value;
       renderProducts(currentProducts, activeFilter);
     });
-  });
+  }
 
   let currentProducts = [];
 
@@ -156,9 +154,10 @@ function initShop() {
   }
 
   function renderProducts(list, filter) {
-    const filtered = (filter === "ALL")
+    // If filter is "ALL", show everything. Otherwise match category.
+    const filtered = (filter === "ALL" || !filter)
       ? list
-      : list.filter(p => String(p.category || "Earrings").toLowerCase() === String(filter).toLowerCase());
+      : list.filter(p => String(p.category || "").toLowerCase() === String(filter).toLowerCase());
 
     grid.innerHTML = "";
     empty.hidden = filtered.length !== 0;
@@ -276,7 +275,7 @@ function normalizeProduct(p) {
     price: Number(p.price) || 0,
     code: p.code || "",
     sku: p.sku || "",
-    category: p.category || "Earrings",
+    category: p.category || "General",
     image_url: p.image_url || "",
     images: Array.isArray(p.images) ? p.images.filter(Boolean) : []
   };
@@ -347,7 +346,7 @@ function wireCartUI() {
     $(sel)?.addEventListener("input", refreshOrderText);
   });
 
-  // --- UPDATED ORDER FORM LOGIC ---
+  // --- UPDATED: Grouped by Category + Subtotals ---
   function refreshOrderText() {
     const name = ($("#cName")?.value || "").trim();
     const phone = ($("#cPhone")?.value || "").trim();
@@ -365,6 +364,7 @@ function wireCartUI() {
     // 1. Group items by Category
     const grouped = {};
     cart.items.forEach(it => {
+      // Use the item category or default to 'General'
       const cat = (it.category || "General").toUpperCase();
       if (!grouped[cat]) grouped[cat] = [];
       grouped[cat].push(it);
@@ -382,7 +382,7 @@ function wireCartUI() {
         const qty = Number(it.qty) || 0;
         const price = Number(it.price) || 0;
         // Prioritize Code/SKU to save space
-        const identifier = (it.code || it.sku || it.name || "N/A").trim();
+        const identifier = (it.code || it.sku || "N/A").trim();
         
         lines.push(`${identifier} x${qty}`);
         
