@@ -465,7 +465,7 @@ async function initAdmin() {
       <div class="keyGate__text">Enter passkey to manage products.</div>
       <input type="password" class="keyGate__input" id="passKey" placeholder="Passkey..." />
       <button class="btn btn--solid btn--wide" id="gateBtn">Unlock</button>
-      <div class="keyGate__hint">Hint: admin123</div>
+      <div class="keyGate__hint">Hint: whou?</div>
     </div>
   `;
   document.body.appendChild(gate);
@@ -698,3 +698,4 @@ async function initAdmin() {
     });
   }
 }
+
