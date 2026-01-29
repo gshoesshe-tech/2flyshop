@@ -31,20 +31,21 @@
   <section class="hero">
     <div class="hero__bg"></div>
 
-    <div class="productsNav">
-  <button class="productsBtn" id="productsToggle" type="button">
-    PRODUCTS
-    <span class="chev">▾</span>
-  </button>
+    <div class="hero__content">
+      <div class="categoryPills">
+        <div class="productsNav">
+          <button class="productsBtn" id="productsToggle" type="button" aria-haspopup="true" aria-expanded="false">
+            PRODUCTS <span class="chev">▾</span>
+          </button>
 
-  <div class="productsDropdown" id="productsDropdown">
-    <button class="ddItem pill is-active" data-filter="Earrings">EARRINGS</button>
-    <button class="ddItem pill" data-filter="Skull Caps">SKULL CAPS</button>
-    <button class="ddItem pill" data-filter="Boxers">BOXERS</button>
-    <button class="ddItem pill" data-filter="ALL">VIEW ALL</button>
-  </div>
-</div>
-
+          <div class="productsDropdown" id="productsDropdown" role="menu" aria-label="Browse categories">
+            <button class="ddItem pill is-active" data-filter="Earrings" type="button" role="menuitem">EARRINGS</button>
+            <button class="ddItem pill" data-filter="Skull Caps" type="button" role="menuitem">SKULL CAPS</button>
+            <button class="ddItem pill" data-filter="Boxers" type="button" role="menuitem">BOXERS</button>
+            <button class="ddItem pill" data-filter="ALL" type="button" role="menuitem">VIEW ALL</button>
+          </div>
+        </div>
+      </div>
 
       <div class="statsStrip">
         <div class="statCol">
