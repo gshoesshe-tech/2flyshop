@@ -700,3 +700,4 @@ async function initAdmin() {
       productsContainer.appendChild(div);
     });
   }
+}
