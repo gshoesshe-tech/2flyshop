@@ -6,7 +6,7 @@
   <title>2FLY!GALLERIA — Shop</title>
   <link rel="stylesheet" href="./style.css" />
   <script src="./config.js"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="./app.js" defer></script>
 </head>
 <body class="page-shop" data-page="shop">
@@ -28,26 +28,48 @@
     </div>
   </header>
 
-  <main>
-    <div class="cat-nav">
-      <div class="cat-scroll">
-        <button class="cat-btn is-active" data-filter="ALL" type="button">All</button>
-        <button class="cat-btn" data-filter="Earrings" type="button">Earrings</button>
-        <button class="cat-btn" data-filter="Skull Caps" type="button">Skull Caps</button>
-        <button class="cat-btn" data-filter="Boxers" type="button">Boxers</button>
-        <button class="cat-btn" data-filter="Necklaces" type="button">Necklaces</button>
-        <button class="cat-btn" data-filter="Rings" type="button">Rings</button>
+  <section class="hero">
+    <div class="hero__bg"></div>
+
+    <div class="hero__content">
+      <div class="categoryPills">
+        <button class="pill is-active" data-filter="Earrings" type="button">EARRINGS</button>
+        <button class="pill" data-filter="Skull Caps" type="button">SKULL CAPS</button>
+        <button class="pill" data-filter="Boxers" type="button">BOXERS</button>
+        <button class="pill" data-filter="ALL" type="button">VIEW ALL</button>
       </div>
+
+      <div class="statsStrip">
+        <div class="statCol">
+          <div class="statBig">500K+</div>
+          <div class="statSmall">SOLD NATIONWIDE<br/>STILL GOING STRONG</div>
+        </div>
+        <div class="statCol">
+          <div class="statBig">10,000+</div>
+          <div class="statSmall">RESELLERS BUILDING THEIR<br/>BUSINESS WITH OUR INVENTORY</div>
+        </div>
+        <div class="statCol">
+          <div class="statBig">10,000+</div>
+          <div class="statSmall">ONLINE TRANSACTIONS<br/>COMPLETED</div>
+        </div>
+      </div>
+
+      <a class="joinBtn" href="https://m.me/cm/AbYv958c_1Ex59E-/?send_source=cm:copy_invite_link" target="_blank" rel="noreferrer">
+        JOIN 2FLY RESELLER COMMUNITY NOW
+      </a>
     </div>
+</section>
 
-    <section class="section">
-      <div id="productsGrid" class="grid"></div>
-      
-      <div id="loadingState" class="shop-msg">Loading products...</div>
-      <div id="emptyState" class="shop-msg" hidden>No products found in this category.</div>
-    </section>
-  </main>
+  <section class="section">
+    <h2 class="sectionTitle">LATEST DROP</h2>
 
+    <div id="productsGrid" class="grid"></div>
+    <div id="emptyState" class="empty" hidden>No products yet.</div>
+  </section>
+
+  <footer class="footerBar">© 2FLY!GALLERIA • WHOLESALE SUPPLIER • PH NATIONWIDE</footer>
+
+  <!-- PRODUCT MODAL (hidden by default) -->
   <div id="productModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-close="1"></div>
     <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Product details">
@@ -64,6 +86,7 @@
           <div id="pPrice" class="pview__price"></div>
           <div class="pview__meta">
             <div><span class="muted">Category:</span> <span id="pCategory"></span></div>
+            <div><span class="muted">SKU:</span> <span id="pSku"></span></div>
             <div><span class="muted">Code:</span> <span id="pCode"></span></div>
           </div>
 
@@ -72,8 +95,8 @@
             <input id="pQty" class="qtyInput" type="number" min="1" step="1" value="1" inputmode="numeric" />
             <button class="qtyBtn" id="pPlus" type="button">+</button>
 
-            <button id="pAddBtn" class="btn btn--solid btn--wide" type="button">
-              ADD TO CART
+            <button id="pAddBtn" class="btn btn--outline btn--wide" type="button">
+              ADD 1 TO CART
             </button>
           </div>
         </div>
@@ -81,6 +104,7 @@
     </div>
   </div>
 
+  <!-- CART DRAWER -->
   <div id="cartOverlay" class="drawerOverlay" hidden></div>
   <aside id="cartDrawer" class="drawer" aria-hidden="true">
     <div class="drawer__top">
@@ -93,12 +117,12 @@
     <div class="drawer__bottom">
       <div class="totals">
         <div class="totals__row">
+          <span class="muted">Subtotal</span>
+          <span id="cartSubtotal">₱0</span>
+        </div>
+        <div class="totals__row">
           <span class="muted">Total Quantity</span>
           <span id="cartTotalQty">0</span>
-        </div>
-        <div class="totals__row" style="font-size:18px; color:#fff; font-weight:700;">
-          <span class="muted">Total</span>
-          <span id="cartSubtotal">₱0</span>
         </div>
       </div>
 
@@ -106,6 +130,7 @@
     </div>
   </aside>
 
+  <!-- CHECKOUT MODAL -->
   <div id="checkoutModal" class="modal" aria-hidden="true">
     <div class="modal__backdrop" data-close-checkout="1"></div>
     <div class="modal__panel modal__panel--checkout" role="dialog" aria-modal="true" aria-label="Checkout">
@@ -131,7 +156,7 @@
          href="https://www.facebook.com/profile.php?id=61565598869280">
         SEND TO FACEBOOK MANUALLY
       </a>
-      
+
       <div class="checkoutNote">
         Note: Copy the form above and send it to our Facebook page to finalize your order.
       </div>
