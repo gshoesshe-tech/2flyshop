@@ -241,9 +241,9 @@ async function initShop() {
       pSizeRow.innerHTML = `
         <span class="muted" style="font-size:12px; font-weight:700; width:50px;">SIZE:</span>
         <select id="pSizeSelect" class="qtyInput" style="width:100%; text-align:left; font-size:12px; padding-left:10px; grid-column:span 3;">
-            <option value="Standard">Standard</option>
-            <option value="Small">Small</option>
-            <option value="Large">Large</option>
+            <option value="Size 7">Size 7</option>
+            <option value="Size 7 1/8">Size 7 1/8</option>
+            <option value="Size 7 1/4">Size 7 1/4</option>
         </select>
       `;
       // Insert size row before Qty row
@@ -703,3 +703,4 @@ async function initAdmin() {
     });
   }
 }
+
