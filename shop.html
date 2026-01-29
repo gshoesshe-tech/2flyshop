@@ -31,13 +31,20 @@
   <section class="hero">
     <div class="hero__bg"></div>
 
-    <div class="hero__content">
-      <div class="categoryPills">
-        <button class="pill is-active" data-filter="Earrings" type="button">EARRINGS</button>
-        <button class="pill" data-filter="Skull Caps" type="button">SKULL CAPS</button>
-        <button class="pill" data-filter="Boxers" type="button">BOXERS</button>
-        <button class="pill" data-filter="ALL" type="button">VIEW ALL</button>
-      </div>
+    <div class="productsNav">
+  <button class="productsBtn" id="productsToggle" type="button">
+    PRODUCTS
+    <span class="chev">▾</span>
+  </button>
+
+  <div class="productsDropdown" id="productsDropdown">
+    <button class="ddItem pill is-active" data-filter="Earrings">EARRINGS</button>
+    <button class="ddItem pill" data-filter="Skull Caps">SKULL CAPS</button>
+    <button class="ddItem pill" data-filter="Boxers">BOXERS</button>
+    <button class="ddItem pill" data-filter="ALL">VIEW ALL</button>
+  </div>
+</div>
+
 
       <div class="statsStrip">
         <div class="statCol">
