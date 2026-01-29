@@ -3,168 +3,209 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>2FLY!GALLERIA — Shop</title>
-  <link rel="stylesheet" href="./style.css" />
-  <script src="./config.js"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="./app.js" defer></script>
+  <title>2FLY — Product dropdown preview</title>
+  <style>
+    :root{
+      --bg:#050505;
+      --panel:rgba(0,0,0,.72);
+      --stroke:rgba(255,255,255,.10);
+      --stroke2:rgba(255,255,255,.16);
+      --txt:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.55);
+      --shadow: 0 18px 60px rgba(0,0,0,.55);
+      --r:16px;
+      --fontHead: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      --fontBody: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@600;700;800;900&display=swap');
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:#fff;font-family:var(--fontBody)}
+
+    /* Topbar (matches your current vibe, not “dosmil”) */
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      height:76px;
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 22px;
+      background:rgba(0,0,0,.60);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .left{display:flex; align-items:center; gap:18px;}
+    .brand{font-family:var(--fontHead);font-weight:900;letter-spacing:.02em;font-size:26px;}
+
+    .nav{display:flex; align-items:center; gap:12px;}
+    .navBtn{
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.25);
+      color:#fff;
+      border-radius:999px;
+      padding:11px 14px;
+      font-family:var(--fontHead);
+      font-weight:900;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      font-size:11px;
+      cursor:pointer;
+      display:inline-flex; align-items:center; gap:10px;
+    }
+    .navBtn:hover{border-color:rgba(255,255,255,.22)}
+
+    .caret{
+      width:10px;height:10px;display:inline-block;
+      border-right:2px solid rgba(255,255,255,.75);
+      border-bottom:2px solid rgba(255,255,255,.75);
+      transform: rotate(45deg);
+      margin-top:-2px;
+      transition: transform .16s ease;
+    }
+    .dropdown.is-open .caret{ transform: rotate(-135deg); margin-top:2px; }
+
+    .dropdown{ position:relative; }
+
+    .menu{
+      position:absolute;
+      top:calc(100% + 12px);
+      left:0;
+      width:260px;
+      background:var(--panel);
+      border:1px solid var(--stroke);
+      border-radius:var(--r);
+      box-shadow:var(--shadow);
+      padding:10px;
+    }
+    .menu[hidden]{display:none;}
+
+    .menuTitle{
+      padding:10px 10px 8px;
+      font-family:var(--fontHead);
+      font-weight:900;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      font-size:10px;
+      color:var(--muted);
+    }
+
+    .menuItem{
+      width:100%;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      padding:12px 12px;
+      border-radius:12px;
+      border:1px solid transparent;
+      background:transparent;
+      color:var(--txt);
+      font-family:var(--fontHead);
+      font-weight:900;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      font-size:12px;
+      cursor:pointer;
+    }
+    .menuItem:hover{ background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.10); }
+
+    .pillTag{
+      font-family:var(--fontBody);
+      font-weight:600;
+      letter-spacing:.02em;
+      text-transform:none;
+      font-size:11px;
+      color:rgba(255,255,255,.55);
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.20);
+    }
+
+    .divider{ height:1px; background:rgba(255,255,255,.08); margin:8px 10px; }
+
+    /* Fake page content just for preview */
+    .hero{min-height:520px; border-bottom:1px solid rgba(255,255,255,.06); position:relative; overflow:hidden;}
+    .hero::before{
+      content:"";
+      position:absolute; inset:0;
+      background:
+        radial-gradient(circle at center, rgba(255,255,255,.10), rgba(0,0,0,.85) 65%),
+        linear-gradient(to bottom, rgba(0,0,0,.35), rgba(0,0,0,.85));
+    }
+    .heroInner{position:relative; padding:120px 22px 90px; display:flex; flex-direction:column; align-items:center; gap:22px;}
+    .hint{color:rgba(255,255,255,.55); letter-spacing:.18em; text-transform:uppercase; font-size:11px; text-align:center;}
+    .big{font-family:var(--fontHead); font-weight:900; letter-spacing:.08em; font-size:44px; text-transform:uppercase;}
+  </style>
 </head>
-<body class="page-shop" data-page="shop">
-
+<body>
   <header class="topbar">
-    <div class="topbar__left">
+    <div class="left">
       <div class="brand">2FLY!GALLERIA</div>
-    </div>
 
-    <div class="topbar__right">
-      <button id="cartBtn" class="cartBadge" type="button" aria-label="Open cart">
-        <span class="cartBadge__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.2 6h14.1l-1.4 7.1c-.2.9-1 1.5-1.9 1.5H9.1c-.9 0-1.7-.6-1.9-1.5L5.3 2H2V0h4.9l.3 2H22v2H7.6l-.4 2z"/>
-          </svg>
-        </span>
-        <span id="cartCount" class="cartBadge__count">0</span>
-      </button>
-    </div>
-  </header>
+      <nav class="nav" aria-label="Shop navigation">
+        <div class="dropdown" id="prodDD">
+          <button class="navBtn" id="prodBtn" type="button" aria-haspopup="true" aria-expanded="false">
+            PRODUCTS <span class="caret" aria-hidden="true"></span>
+          </button>
 
-  <section class="hero">
-    <div class="hero__bg"></div>
+          <div class="menu" id="prodMenu" role="menu" hidden>
+            <div class="menuTitle">Browse categories</div>
 
-    <div class="hero__content">
-      
-      <div class="filterWrap">
-        <label for="categorySelect" class="filterLabel">FILTER BY CATEGORY:</label>
-        <div class="selectWrapper">
-          <select id="categorySelect" class="filterSelect">
-            <option value="ALL">VIEW ALL</option>
-            <option value="Earrings">EARRINGS</option>
-            <option value="Tank Tops">TANK TOPS</option>
-            <option value="Skull Caps">SKULL CAPS</option>
-            <option value="Caps">CAPS</option>
-          </select>
-        </div>
-      </div>
-      <div class="statsStrip">
-        <div class="statCol">
-          <div class="statBig">500K+</div>
-          <div class="statSmall">SOLD NATIONWIDE<br/>STILL GOING STRONG</div>
-        </div>
-        <div class="statCol">
-          <div class="statBig">10,000+</div>
-          <div class="statSmall">RESELLERS BUILDING THEIR<br/>BUSINESS WITH OUR INVENTORY</div>
-        </div>
-        <div class="statCol">
-          <div class="statBig">10,000+</div>
-          <div class="statSmall">ONLINE TRANSACTIONS<br/>COMPLETED</div>
-        </div>
-      </div>
+            <button class="menuItem" type="button" role="menuitem">
+              Earrings <span class="pillTag">Category</span>
+            </button>
+            <button class="menuItem" type="button" role="menuitem">
+              Tank Tops <span class="pillTag">Category</span>
+            </button>
+            <button class="menuItem" type="button" role="menuitem">
+              Boxers <span class="pillTag">Category</span>
+            </button>
+            <button class="menuItem" type="button" role="menuitem">
+              Skull Caps <span class="pillTag">Category</span>
+            </button>
+            <button class="menuItem" type="button" role="menuitem">
+              Close Caps <span class="pillTag">Category</span>
+            </button>
 
-      <a class="joinBtn" href="https://m.me/cm/AbYv958c_1Ex59E-/?send_source=cm:copy_invite_link" target="_blank" rel="noreferrer">
-        JOIN 2FLY RESELLER COMMUNITY NOW
-      </a>
-    </div>
-</section>
+            <div class="divider"></div>
 
-  <section class="section">
-    <h2 class="sectionTitle">LATEST DROP</h2>
-
-    <div id="productsGrid" class="grid"></div>
-    <div id="emptyState" class="empty" hidden>No products yet.</div>
-  </section>
-
-  <footer class="footerBar">© 2FLY!GALLERIA • WHOLESALE SUPPLIER • PH NATIONWIDE</footer>
-
-  <div id="productModal" class="modal" aria-hidden="true">
-    <div class="modal__backdrop" data-close="1"></div>
-    <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Product details">
-      <button class="modal__close" type="button" data-close="1" aria-label="Close">×</button>
-
-      <div class="pview">
-        <div class="pview__media">
-          <img id="pMainImg" class="pview__main" alt="" />
-          <div id="pThumbs" class="pview__thumbs"></div>
-        </div>
-
-        <div class="pview__info">
-          <div id="pName" class="pview__name"></div>
-          <div id="pPrice" class="pview__price"></div>
-          <div class="pview__meta">
-            <div><span class="muted">Category:</span> <span id="pCategory"></span></div>
-            <div><span class="muted">SKU:</span> <span id="pSku"></span></div>
-            <div><span class="muted">Code:</span> <span id="pCode"></span></div>
-          </div>
-
-          <div class="qtyRow">
-            <button class="qtyBtn" id="pMinus" type="button">−</button>
-            <input id="pQty" class="qtyInput" type="number" min="1" step="1" value="1" inputmode="numeric" />
-            <button class="qtyBtn" id="pPlus" type="button">+</button>
-
-            <button id="pAddBtn" class="btn btn--outline btn--wide" type="button">
-              ADD 1 TO CART
+            <button class="menuItem" type="button" role="menuitem">
+              View All <span class="pillTag">All</span>
             </button>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="cartOverlay" class="drawerOverlay" hidden></div>
-  <aside id="cartDrawer" class="drawer" aria-hidden="true">
-    <div class="drawer__top">
-      <div class="drawer__title">Your Cart</div>
-      <button id="closeCartBtn" class="drawer__close" type="button" aria-label="Close cart">×</button>
+      </nav>
     </div>
 
-    <div id="cartItems" class="drawer__items"></div>
+    <!-- Cart placeholder (so spacing feels like your real header) -->
+    <button class="navBtn" type="button" aria-label="Cart">CART</button>
+  </header>
 
-    <div class="drawer__bottom">
-      <div class="totals">
-        <div class="totals__row">
-          <span class="muted">Subtotal</span>
-          <span id="cartSubtotal">₱0</span>
-        </div>
-        <div class="totals__row">
-          <span class="muted">Total Quantity</span>
-          <span id="cartTotalQty">0</span>
-        </div>
-      </div>
-
-      <button id="checkoutBtn" class="btn btn--solid btn--wide" type="button">CHECKOUT</button>
+  <section class="hero">
+    <div class="heroInner">
+      <div class="big">Latest Drop</div>
+      <div class="hint">Click “PRODUCTS” to see the dropdown.</div>
     </div>
-  </aside>
+  </section>
 
-  <div id="checkoutModal" class="modal" aria-hidden="true">
-    <div class="modal__backdrop" data-close-checkout="1"></div>
-    <div class="modal__panel modal__panel--checkout" role="dialog" aria-modal="true" aria-label="Checkout">
-      <button class="modal__close" type="button" data-close-checkout="1" aria-label="Close">×</button>
+  <script>
+    const dd = document.getElementById('prodDD');
+    const btn = document.getElementById('prodBtn');
+    const menu = document.getElementById('prodMenu');
 
-      <h3 class="checkoutTitle">Checkout</h3>
+    function open(){ dd.classList.add('is-open'); menu.hidden = false; btn.setAttribute('aria-expanded','true'); }
+    function close(){ dd.classList.remove('is-open'); menu.hidden = true; btn.setAttribute('aria-expanded','false'); }
 
-      <div class="form">
-        <input id="cName" class="input" placeholder="Full Name" />
-        <input id="cPhone" class="input" placeholder="Phone Number" />
-        <input id="cAddress" class="input" placeholder="Shipping Address" />
-        <input id="cNotes" class="input" placeholder="Notes (optional)" />
-      </div>
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(menu.hidden) open(); else close();
+    });
 
-      <div class="orderBox">
-        <div class="orderBox__title">🛒 ORDER FORM – 2FLY.GALLERIA</div>
-        <textarea id="orderText" class="orderBox__text" readonly></textarea>
-      </div>
+    document.addEventListener('click', ()=> close());
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') close(); });
 
-      <button id="copyOrderBtn" class="btn btn--solid btn--wide" type="button">COPY ORDER FORM</button>
-
-      <a class="btn btn--ghost btn--wide" target="_blank" rel="noreferrer"
-         href="https://www.facebook.com/profile.php?id=61565598869280">
-        SEND TO FACEBOOK MANUALLY
-      </a>
-
-      <div class="checkoutNote">
-        Note: Copy the form above and send it to our Facebook page to finalize your order.
-      </div>
-    </div>
-  </div>
-
+    // demo: close after clicking an item
+    menu.addEventListener('click', (e)=>{
+      const item = e.target.closest('button');
+      if(!item) return;
+      close();
+    });
+  </script>
 </body>
 </html>
