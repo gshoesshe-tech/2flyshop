@@ -276,7 +276,6 @@ async function initShop() {
     pName.textContent = p.name;
     pPrice.textContent = money(p.price);
     pCategory.textContent = p.category || '-';
-    pSku.textContent = p.sku || '-';
     pCode.textContent = p.code || '-';
 
     // --- SIZING LOGIC (Close Caps Only) ---
@@ -702,5 +701,4 @@ async function initAdmin() {
     });
   }
 }
-
 
